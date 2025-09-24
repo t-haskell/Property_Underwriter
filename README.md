@@ -21,6 +21,22 @@ A Streamlit-based property investment analysis tool for rental and flip analysis
    cp .env.example .env
    # Add your API keys to .env
    ```
+   Available settings:
+
+   | Variable | Description | Default |
+   | --- | --- | --- |
+   | `ZILLOW_API_KEY` | API key for Zillow/Bridge Interactive | _unset_ |
+   | `ZILLOW_BASE_URL` | Base URL for the Zillow API wrapper | `https://api.bridgedataoutput.com/api/v2` |
+   | `RENTOMETER_API_KEY` | API key for Rentometer | _unset_ |
+   | `RENTOMETER_BASE_URL` | Base URL for Rentometer API | `https://www.rentometer.com/api/v1` |
+   | `RENTOMETER_DEFAULT_BEDROOMS` | Optional default bedroom count for Rentometer queries | _unset_ |
+   | `ATTOM_API_KEY` | API key for ATTOM | _unset_ |
+   | `ATTOM_BASE_URL` | Base URL for ATTOM API | `https://api.gateway.attomdata.com/propertyapi/v1.0.0` |
+   | `CLOSINGCORP_API_KEY` | API key for ClosingCorp | _unset_ |
+   | `CLOSINGCORP_BASE_URL` | Base URL for ClosingCorp API (if provided) | _unset_ |
+   | `CACHE_TTL_MIN` | Cache time-to-live (minutes) | `60` |
+   | `PROVIDER_TIMEOUT_SEC` | Timeout for provider HTTP requests | `10` |
+   | `USE_MOCK_PROVIDER_IF_NO_KEYS` | Use mock data when no providers are configured | `true` |
 
 3. **Run the app**:
    ```bash
@@ -76,6 +92,9 @@ underwriter/
 
 ### Testing
 ```bash
+python -m venv venv  # if you haven't created one yet
+source venv/bin/activate
+pip install -r requirements.txt
 pytest tests/
 ```
 

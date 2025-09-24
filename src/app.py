@@ -1,9 +1,16 @@
 import streamlit as st
-from utils.logging import logger
-from ui.ui_components import address_input, analysis_choice, rental_form, flip_form
-from services.data_fetch import fetch_property
-from services.analysis_service import analyze_rental, analyze_flip
-from utils.currency import usd
+from src.utils.logging import logger
+from src.ui.ui_components import (
+    address_input,
+    analysis_choice,
+    rental_form,
+    flip_form,
+    reset_rental_form_state,
+    reset_flip_form_state,
+)
+from src.services.data_fetch import fetch_property
+from src.services.analysis_service import analyze_rental, analyze_flip
+from src.utils.currency import usd
 
 st.set_page_config(page_title="Property Underwriter", layout="wide")
 
@@ -25,11 +32,15 @@ st.session_state.analysis_type = choice
 if addr and st.button("Fetch Property Data"):
     st.session_state.address = addr
     st.session_state.property = fetch_property(addr)
+    st.session_state.result = None
+    reset_rental_form_state()
+    reset_flip_form_state()
     st.success("Property data loaded (mock if APIs not configured).")
 
 prop = st.session_state.property
 if prop:
     with st.expander("Pulled Data", expanded=False):
+        st.json(prop.__dict__)
         st.json({
             "market_value_estimate": prop.market_value_estimate,
             "rent_estimate": prop.rent_estimate,

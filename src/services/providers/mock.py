@@ -1,8 +1,11 @@
 from __future__ import annotations
 from typing import Optional
-from core.models import Address, PropertyData, ApiSource
 
-class MockProvider:
+from core.models import Address, ApiSource, PropertyData
+from .base import PropertyDataProvider
+
+
+class MockProvider(PropertyDataProvider):
     def fetch(self, address: Address) -> Optional[PropertyData]:
         # Placeholder, deterministic values for repeatability
         return PropertyData(

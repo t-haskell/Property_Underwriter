@@ -1,8 +1,15 @@
 import pytest
 from src.core.calculations import (
-    monthly_mortgage_payment, noi_annual, cap_rate_pct, 
-    annual_debt_service, rental_cash_flow, target_price_for_cap_rate,
-    irr, flip_suggested_purchase_price, soft_costs_from_pct
+    annual_debt_service,
+    cap_rate_pct,
+    flip_suggested_purchase_price,
+    irr,
+    monthly_mortgage_payment,
+    noi_annual,
+    remaining_loan_balance,
+    rental_cash_flow,
+    soft_costs_from_pct,
+    target_price_for_cap_rate,
 )
 
 def test_monthly_mortgage_payment():
@@ -13,6 +20,10 @@ def test_monthly_mortgage_payment():
     # Test zero interest rate
     payment = monthly_mortgage_payment(300000, 0.0, 30)
     assert payment == 300000 / (30 * 12)
+
+    # Interest only
+    interest_only_payment = monthly_mortgage_payment(300000, 0.06, 30, interest_only=True)
+    assert abs(interest_only_payment - (300000 * 0.06 / 12)) < 1e-6
 
 def test_noi_annual():
     # Test case: $30k annual rent, 5% vacancy, $8k opex, 8% mgmt
@@ -66,3 +77,17 @@ def test_soft_costs_from_pct():
     soft = soft_costs_from_pct(300000, 0.02, 0.06, 400000)
     expected = 300000 * 0.02 + 400000 * 0.06
     assert abs(soft - expected) < 0.01 
+
+
+def test_remaining_loan_balance():
+    principal = 300000
+    rate = 0.05
+    term_years = 30
+    # After 60 payments (5 years) the balance should be less than the principal
+    balance = remaining_loan_balance(principal, rate, term_years, 60)
+    assert balance < principal
+
+    # Zero interest case reduces linearly
+    linear_balance = remaining_loan_balance(principal, 0.0, term_years, 60)
+    expected_balance = principal - (principal / (term_years * 12)) * 60
+    assert abs(linear_balance - expected_balance) < 1e-6

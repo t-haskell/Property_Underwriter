@@ -1,15 +1,20 @@
 from __future__ import annotations
-from typing import Optional
+from typing import Dict, Optional
+
 import requests
-from ...core.models import Address, PropertyData, ApiSource
+
+from ...core.models import Address, ApiSource, PropertyData
+from ...utils.logging import logger
 from .base import PropertyDataProvider
+
 
 class ZillowProvider(PropertyDataProvider):
     """Zillow property data provider - requires API key configuration."""
-    
-    def __init__(self, api_key: str):
+
+    def __init__(self, api_key: str, base_url: str | None = None, timeout: int = 10):
         self.api_key = api_key
-        self.base_url = "https://api.bridgedataoutput.com/api/v2"
+        self.base_url = (base_url or "https://api.bridgedataoutput.com/api/v2").rstrip("/")
+        self.timeout = timeout
     
     def fetch(self, address: Address) -> Optional[PropertyData]:
         try:
@@ -19,14 +24,26 @@ class ZillowProvider(PropertyDataProvider):
             # Search for property by address
             property_data = self._search_property(formatted_address)
             if not property_data:
+                logger.info("ZillowProvider: no property found for %s", formatted_address)
                 return None
             
             # Get detailed property information
-            detailed_data = self._get_property_details(property_data.get('zpid'))
+            zpid = property_data.get('zpid')
+            if not zpid:
+                logger.info("ZillowProvider: search result missing ZPID for %s", formatted_address)
+                return None
+
+            detailed_data = self._get_property_details(zpid)
             if not detailed_data:
                 return None
             
             # Map Zillow data to our PropertyData model
+            meta: Dict[str, str] = {}
+            for key in ('zpid', 'lastUpdated', 'zestimateConfidence'):
+                value = detailed_data.get(key)
+                if value is not None:
+                    meta[key] = str(value)
+
             return PropertyData(
                 address=address,
                 beds=detailed_data.get('bedrooms'),
@@ -38,16 +55,12 @@ class ZillowProvider(PropertyDataProvider):
                 rent_estimate=detailed_data.get('rentZestimate'),
                 annual_taxes=detailed_data.get('taxAssessment'),
                 closing_cost_estimate=None,  # Zillow doesn't provide this
-                meta={
-                    'zpid': detailed_data.get('zpid'),
-                    'last_updated': detailed_data.get('lastUpdated'),
-                    'confidence': detailed_data.get('zestimateConfidence')
-                },
+                meta=meta,
                 sources=[ApiSource.ZILLOW]
             )
             
-        except Exception as e:
-            print(f"Error fetching Zillow data: {e}")
+        except Exception as exc:
+            logger.exception("Error fetching Zillow data for %s: %s", address, exc)
             return None
     
     def _search_property(self, address: str) -> Optional[dict]:
@@ -67,18 +80,25 @@ class ZillowProvider(PropertyDataProvider):
                 f"{self.base_url}/properties",
                 headers=headers,
                 params=params,
-                timeout=10
+                timeout=self.timeout,
             )
-            
+
             if response.status_code == 200:
                 data = response.json()
-                if data.get('properties') and len(data['properties']) > 0:
-                    return data['properties'][0]
-            
+                props = data.get('properties') or []
+                if props:
+                    return props[0]
+            else:
+                logger.error(
+                    "ZillowProvider: search failed with status %s and body %s",
+                    response.status_code,
+                    response.text,
+                )
+
             return None
             
-        except Exception as e:
-            print(f"Error searching property: {e}")
+        except Exception as exc:
+            logger.exception("Error searching property on Zillow: %s", exc)
             return None
     
     def _get_property_details(self, zpid: str) -> Optional[dict]:
@@ -92,14 +112,20 @@ class ZillowProvider(PropertyDataProvider):
             response = requests.get(
                 f"{self.base_url}/properties/{zpid}",
                 headers=headers,
-                timeout=10
+                timeout=self.timeout,
             )
-            
+
             if response.status_code == 200:
                 return response.json()
-            
+
+            logger.error(
+                "ZillowProvider: detail fetch failed for %s with status %s and body %s",
+                zpid,
+                response.status_code,
+                response.text,
+            )
             return None
             
-        except Exception as e:
-            print(f"Error getting property details: {e}")
+        except Exception as exc:
+            logger.exception("Error getting Zillow property details for %s: %s", zpid, exc)
             return None 

@@ -1,19 +1,50 @@
 from __future__ import annotations
 from typing import List, Optional
-import math
 
 
+def monthly_mortgage_payment(principal: float, annual_rate: float, term_years: int, interest_only: bool = False) -> float:
+    """Fixed-rate monthly payment. ``annual_rate`` should be expressed as a decimal (e.g. 0.065)."""
 
-def monthly_mortgage_payment(principal: float, annual_rate: float, term_months: int, interest_only: bool = False) -> float:
-    """Fixed-rate payment (P&I). annual_rate as decimal (e.g., 0.065)."""
-    r = annual_rate / 12
-    n = term_months * 12
-    if r == 0: return principal / n
+    if principal <= 0:
+        return 0.0
+
+    total_payments = max(term_years, 0) * 12
+    if total_payments == 0:
+        return principal
+
+    monthly_rate = annual_rate / 12
+
+    if annual_rate == 0:
+        return principal / total_payments
+
     if interest_only:
-        return principal * r / 12
-    return principal * (r * (1 + r) ** n) / ((1 + r) ** n - 1)
+        return principal * monthly_rate
 
-# TODO: 
+    factor = (1 + monthly_rate) ** total_payments
+    return principal * (monthly_rate * factor) / (factor - 1)
+
+
+def remaining_loan_balance(principal: float, annual_rate: float, term_years: int, payments_made_months: int) -> float:
+    """Outstanding balance after a number of payments."""
+
+    if principal <= 0:
+        return 0.0
+
+    total_payments = max(term_years, 0) * 12
+    payments_made = max(0, min(payments_made_months, total_payments))
+
+    if total_payments == 0:
+        return 0.0
+
+    if annual_rate == 0:
+        payment = principal / total_payments
+        remaining = principal - payment * payments_made
+        return max(remaining, 0.0)
+
+    monthly_rate = annual_rate / 12
+    payment = monthly_mortgage_payment(principal, annual_rate, term_years)
+    balance = principal * (1 + monthly_rate) ** payments_made - payment * (((1 + monthly_rate) ** payments_made - 1) / monthly_rate)
+    return max(balance, 0.0)
 
 # Validated
 def noi_annual(gross_rent_annual: float, vacancy_rate_pct: float,
@@ -64,4 +95,5 @@ def flip_suggested_purchase_price(arv: float, reno: float, soft_costs: float,
 
 def soft_costs_from_pct(price: float, closing_buy_pct: float, closing_sell_pct: float,
                         arv: float) -> float:
-    return (price * closing_buy_pct/100) + (arv * closing_sell_pct/100) 
+    """Compute soft costs from fractional percentages (e.g. 0.02 for 2%)."""
+    return (price * closing_buy_pct) + (arv * closing_sell_pct)

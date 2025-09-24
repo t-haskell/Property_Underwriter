@@ -1,6 +1,6 @@
 import pytest
-from src.core.models import Address, PropertyData, RentalAssumptions, FlipAssumptions, ApiSource
-from src.services.analysis_service import analyze_rental, analyze_flip
+from src.core.models import ApiSource, Address, FlipAssumptions, PropertyData, RentalAssumptions
+from src.services.analysis_service import analyze_flip, analyze_rental
 
 @pytest.fixture
 def sample_property():
@@ -26,19 +26,22 @@ def sample_rental_assumptions():
         hoa_annual=0.0,
         property_mgmt_pct=8.0,
         hold_period_years=5,
-        target_cap_rate_pct=6.0
+        target_cap_rate_pct=6.0,
+        target_irr_pct=12.0,
     )
 
 @pytest.fixture
 def sample_flip_assumptions():
     return FlipAssumptions(
+        down_payment_pct=20.0,
+        interest_rate_annual=0.065,
+        loan_term_years=30,
         renovation_budget=60000.0,
         hold_time_months=6,
         target_margin_pct=0.10,
         closing_pct_buy=0.02,
         closing_pct_sell=0.06,
-        carry_costs_monthly=1200.0,
-        arv_override=None
+        arv_override=None,
     )
 
 def test_analyze_rental(sample_property, sample_rental_assumptions):

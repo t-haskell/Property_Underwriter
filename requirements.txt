@@ -1,3 +1,5 @@
 streamlit
 pydantic
-requests 
+pydantic-settings
+requests
+pytest
