@@ -1,8 +1,8 @@
 from __future__ import annotations
 from typing import List, Optional
 
-from core.models import FlipAssumptions, FlipResult, PropertyData, RentalAssumptions, RentalResult
-from core.calculations import (
+from ..core.models import FlipAssumptions, FlipResult, PropertyData, RentalAssumptions, RentalResult
+from ..core.calculations import (
     annual_debt_service,
     cap_rate_pct,
     flip_suggested_purchase_price,

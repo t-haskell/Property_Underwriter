@@ -1,8 +1,16 @@
+from __future__ import annotations
+
+from typing import Dict, List, Optional, Tuple
+
 import streamlit as st
-from core.models import Address, FlipAssumptions, RentalAssumptions
+
+from ..core.models import Address, FlipAssumptions, RentalAssumptions
+from ..services.nominatim_places import get_address_from_suggestion, get_place_suggestions
+from ..utils.config import settings
+from .autocomplete_component import enhanced_address_autocomplete, instant_address_autocomplete
 
 
-RENTAL_DEFAULTS: dict[str, float] = {
+RENTAL_DEFAULTS: Dict[str, float] = {
     "rental_purchase_price": 350000.0,
     "rental_down_payment_pct": 20.0,
     "rental_interest_rate_pct": 6.5,
@@ -18,7 +26,7 @@ RENTAL_DEFAULTS: dict[str, float] = {
     "rental_target_irr": 0.0,
 }
 
-FLIP_DEFAULTS: dict[str, float] = {
+FLIP_DEFAULTS: Dict[str, float] = {
     "flip_purchase_price": 250000.0,
     "flip_down_payment_pct": 20.0,
     "flip_interest_rate_pct": 6.5,
@@ -30,6 +38,20 @@ FLIP_DEFAULTS: dict[str, float] = {
     "flip_closing_sell_pct": 6.0,
     "flip_arv_override": 0.0,
 }
+
+ADDRESS_DEFAULTS: Dict[str, str] = {
+    "address_search_query": "",
+    "address_suggestion_label": "",
+    "selected_address_display": "",
+    "manual_address_line1": "",
+    "manual_address_city": "",
+    "manual_address_state": "",
+    "manual_address_zip": "",
+}
+
+def _ensure_address_state() -> None:
+    for key, default in ADDRESS_DEFAULTS.items():
+        st.session_state.setdefault(key, default)
 
 
 def reset_rental_form_state() -> None:
@@ -51,21 +73,60 @@ def _ensure_flip_defaults() -> None:
     for key, default in FLIP_DEFAULTS.items():
         st.session_state.setdefault(key, default)
 
-def address_input() -> Address | None:
+
+def _format_selectbox_option(value: str) -> str:
+    return value if value else "Select an address"
+
+
+def address_input() -> Optional[Address]:
+    _ensure_address_state()
+
     st.subheader("Property Address")
-    col1, col2 = st.columns(2)
-    line1 = st.text_input("Street Address")
-    city = col1.text_input("City")
-    state = col2.text_input("State (e.g., MA)")
-    zipc = st.text_input("ZIP")
-    if line1 and city and state and zipc:
-        return Address(line1=line1, city=city, state=state, zip=zipc)
+    
+    # Use the enhanced autocomplete component
+    selected_suggestion = enhanced_address_autocomplete(
+        suggestions_func=get_place_suggestions,
+        placeholder="Start typing an address...",
+        max_suggestions=5,
+        key="property_address_autocomplete"
+    )
+    
+    # If user selected a suggestion, populate the manual fields
+    if selected_suggestion:
+        address = get_address_from_suggestion(selected_suggestion)
+        if address:
+            st.session_state.manual_address_line1 = address.line1
+            st.session_state.manual_address_city = address.city
+            st.session_state.manual_address_state = address.state
+            st.session_state.manual_address_zip = address.zip
+            st.success(f"✅ Address selected: {selected_suggestion.get('description', '')}")
+    
+    st.write("**Or enter manually:**")
+    manual_line1 = st.text_input("Street Address", key="manual_address_line1")
+    city_col, state_col = st.columns(2)
+    manual_city = city_col.text_input("City", key="manual_address_city")
+    manual_state = state_col.text_input("State (e.g., MA)", key="manual_address_state")
+    manual_zip = st.text_input("ZIP", key="manual_address_zip")
+
+    line1 = manual_line1.strip()
+    city = manual_city.strip()
+    state = manual_state.strip().upper()
+    postal = manual_zip.strip()
+
+    if line1 and city and state and postal:
+        return Address(line1=line1, city=city, state=state, zip=postal)
+
     return None
 
-def analysis_choice() -> str:
-    return st.sidebar.radio("Analysis Type", ["Rental Analysis", "Renovation Flip Analysis"])
 
-def rental_form() -> tuple[RentalAssumptions, float]:
+def analysis_choice() -> str:
+    options = ["Rental Analysis", "Renovation Flip Analysis"]
+    current = st.session_state.get("analysis_type", options[0])
+    index = options.index(current) if current in options else 0
+    return st.sidebar.radio("Analysis Type", options, index=index)
+
+
+def rental_form() -> Tuple[RentalAssumptions, float]:
     st.subheader("Rental Assumptions")
     _ensure_rental_defaults()
 
@@ -100,7 +161,9 @@ def rental_form() -> tuple[RentalAssumptions, float]:
 
     return assumptions, price
 
-def flip_form() -> tuple[FlipAssumptions, float]:
+
+
+def flip_form() -> Tuple[FlipAssumptions, float]:
     st.subheader("Flip Assumptions")
     _ensure_flip_defaults()
 

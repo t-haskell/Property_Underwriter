@@ -15,6 +15,8 @@ class Settings(BaseSettings):
     CLOSINGCORP_API_KEY: str | None = None
     CLOSINGCORP_BASE_URL: str | None = None
 
+    GOOGLE_PLACES_API_KEY: str | None = None
+
     CACHE_TTL_MIN: int = 60
     PROVIDER_TIMEOUT_SEC: int = 10
     USE_MOCK_PROVIDER_IF_NO_KEYS: bool = True

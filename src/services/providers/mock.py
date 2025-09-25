@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import Optional
 
-from core.models import Address, ApiSource, PropertyData
+from ...core.models import Address, ApiSource, PropertyData
 from .base import PropertyDataProvider
 
 

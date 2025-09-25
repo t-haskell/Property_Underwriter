@@ -2,15 +2,15 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from src.core.models import Address, PropertyData
-from src.utils.config import settings
-from src.utils.logging import logger
-from src.services.providers.attom import AttomProvider
-from src.services.providers.base import PropertyDataProvider
-from src.services.providers.closingcorp import ClosingcorpProvider
-from src.services.providers.mock import MockProvider
-from src.services.providers.rentometer import RentometerProvider
-from src.services.providers.zillow import ZillowProvider
+from ..core.models import Address, PropertyData
+from ..utils.config import settings
+from ..utils.logging import logger
+from .providers.attom import AttomProvider
+from .providers.base import PropertyDataProvider
+from .providers.closingcorp import ClosingcorpProvider
+from .providers.mock import MockProvider
+from .providers.rentometer import RentometerProvider
+from .providers.zillow import ZillowProvider
 
 
 def merge(a: PropertyData, b: PropertyData) -> PropertyData:

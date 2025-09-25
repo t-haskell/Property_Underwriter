@@ -34,6 +34,7 @@ A Streamlit-based property investment analysis tool for rental and flip analysis
    | `ATTOM_BASE_URL` | Base URL for ATTOM API | `https://api.gateway.attomdata.com/propertyapi/v1.0.0` |
    | `CLOSINGCORP_API_KEY` | API key for ClosingCorp | _unset_ |
    | `CLOSINGCORP_BASE_URL` | Base URL for ClosingCorp API (if provided) | _unset_ |
+   | `GOOGLE_PLACES_API_KEY` | API key for Google Places Autocomplete | _unset_ |
    | `CACHE_TTL_MIN` | Cache time-to-live (minutes) | `60` |
    | `PROVIDER_TIMEOUT_SEC` | Timeout for provider HTTP requests | `10` |
    | `USE_MOCK_PROVIDER_IF_NO_KEYS` | Use mock data when no providers are configured | `true` |
@@ -106,4 +107,5 @@ pytest tests/
 - [ ] User authentication
 - [ ] Advanced analytics and charts
 - [ ] Comps analysis
-- [ ] Background task processing 
+- [ ] Background task processing
+

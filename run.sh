@@ -15,6 +15,9 @@ echo "Activating virtual environment and installing dependencies..."
 source venv/bin/activate
 pip install -r requirements.txt
 
+# Ensure the project package is discoverable
+export PYTHONPATH="$(pwd):$PYTHONPATH"
+
 # Start the Streamlit application
 echo "Starting Streamlit application..."
 echo "The app will open in your browser at http://localhost:8501"
