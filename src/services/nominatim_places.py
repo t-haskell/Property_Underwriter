@@ -25,6 +25,7 @@ def get_place_suggestions(query: str, country: Optional[str] = "us", limit: int 
     Get address suggestions from OpenStreetMap Nominatim.
     Completely free, no API key required.
     """
+    logger.info(f"Getting place suggestions for {query}")
     if not query.strip():
         return []
 
@@ -40,7 +41,8 @@ def get_place_suggestions(query: str, country: Optional[str] = "us", limit: int 
     try:
         # Add a small delay to be respectful to the free service
         time.sleep(0.1)
-        
+        prepared_request = requests.Request('GET', f"{NOMINATIM_BASE_URL}/search", params=params).prepare()
+        logger.debug("Nominatim request URL: %s", prepared_request.url)
         response = requests.get(
             f"{NOMINATIM_BASE_URL}/search",
             params=params,

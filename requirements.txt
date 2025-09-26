@@ -1,5 +1,7 @@
-streamlit
 pydantic
 pydantic-settings
 requests
 pytest
+fastapi
+uvicorn
+streamlit
