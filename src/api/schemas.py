@@ -100,8 +100,16 @@ class FlipAnalysisResponse(BaseModel):
 class Suggestion(BaseModel):
     description: str
     place_id: str
+    street: Optional[str] = Field(default=None, description="Street address line returned by Nominatim")
+    city: Optional[str] = Field(default=None, description="City or locality name")
+    state: Optional[str] = Field(default=None, min_length=2, max_length=2, description="Two-letter state code if available")
+    zip: Optional[str] = Field(default=None, description="ZIP or postal code")
     lat: Optional[str] = None
     lon: Optional[str] = None
+
+    @validator("state")
+    def _state_upper(cls, value: Optional[str]) -> Optional[str]:
+        return value.upper() if value else value
 
 
 class SuggestionsResponse(BaseModel):

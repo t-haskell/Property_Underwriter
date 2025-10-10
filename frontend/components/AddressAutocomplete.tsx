@@ -32,8 +32,10 @@ export function AddressAutocomplete({
       setError(null);
       try {
         const results = await suggestPlaces(current);
+        // Keep only full addresses when the backend hasn't restarted yet
+        const filtered = results.filter(isFullAddressClient);
         if (!ignore) {
-          setSuggestions(results);
+          setSuggestions(filtered);
         }
       } catch (err) {
         if (!ignore) {
@@ -97,7 +99,9 @@ export function AddressAutocomplete({
             gap: 8,
           }}
         >
-          {suggestions.map((suggestion) => (
+          {suggestions.map((suggestion) => {
+            const label = formatSuggestionLabel(suggestion);
+            return (
             <button
               key={suggestion.place_id}
               type="button"
@@ -107,15 +111,36 @@ export function AddressAutocomplete({
                 padding: "0.75rem 0.85rem",
                 borderRadius: 8,
                 border: "1px solid #cbd5e1",
-                background: "#fff",
+                backgroundColor: "#ffffff",
+                color: "#111827", // force dark text for readability across themes
                 cursor: "pointer",
               }}
             >
-              {suggestion.description}
+              {label}
             </button>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
   );
+}
+
+function formatSuggestionLabel(s: Suggestion): string {
+  const street = (s.street ?? "").trim();
+  const city = (s.city ?? "").trim();
+  const state = (s.state ?? "").trim();
+  const zip = (s.zip ?? "").trim();
+  const locality = [state, zip].filter(Boolean).join(" ");
+  const parts = [street, city, locality].filter(Boolean);
+  return parts.length > 0 ? parts.join(", ") : (s.description || "").trim() || `Suggestion ${s.place_id ?? ""}`;
+}
+
+function isFullAddressClient(s: Suggestion): boolean {
+  const street = (s.street ?? "").trim();
+  const city = (s.city ?? "").trim();
+  const state = (s.state ?? "").trim();
+  const zip = (s.zip ?? "").trim();
+  if (!street || !city || !state || !zip) return false;
+  return /\d/.test(street); // basic house number check
 }

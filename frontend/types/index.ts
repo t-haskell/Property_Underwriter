@@ -23,6 +23,11 @@ export interface PropertyData {
 export interface Suggestion {
   description: string;
   place_id: string;
+  // Optional structured fields (present in our API)
+  street?: string | null;
+  city?: string | null;
+  state?: string | null; // two-letter code when available
+  zip?: string | null;
   lat?: string | null;
   lon?: string | null;
 }

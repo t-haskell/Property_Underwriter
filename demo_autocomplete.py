@@ -6,7 +6,7 @@ This allows you to compare the different UX approaches.
 import streamlit as st
 from src.ui.ui_components import address_input
 from src.ui.alternative_address_input import alternative_address_input
-from src.ui.autocomplete_component import enhanced_address_autocomplete, instant_address_autocomplete
+from src.ui.autocomplete_component import enhanced_address_autocomplete, instant_address_autocomplete, format_suggestion_label
 from src.services.nominatim_places import get_place_suggestions
 
 st.set_page_config(page_title="Autocomplete Demo", layout="wide")
@@ -44,7 +44,7 @@ with tab1:
     )
     
     if selected_suggestion:
-        st.success(f"✅ Selected: {selected_suggestion.get('description', '')}")
+        st.success(f"✅ Selected: {format_suggestion_label(selected_suggestion)}")
         st.json(selected_suggestion)
 
 with tab2:
@@ -66,7 +66,7 @@ with tab2:
     )
     
     if selected_suggestion:
-        st.success(f"✅ Selected: {selected_suggestion.get('description', '')}")
+        st.success(f"✅ Selected: {format_suggestion_label(selected_suggestion)}")
         st.json(selected_suggestion)
 
 with tab3:
@@ -89,14 +89,14 @@ with tab3:
         suggestions = get_place_suggestions(search_query.strip())
     
     if suggestions:
-        suggestion_labels = [s.get("description", "") for s in suggestions if s.get("description")]
+        suggestion_labels = [format_suggestion_label(s) for s in suggestions if s.get("description")]
         options = [""] + suggestion_labels
         selection = st.selectbox(
             "Address suggestions (OpenStreetMap)",
             options,
             key="original_suggestion_label",
         )
-        
+
         if selection:
             st.success(f"✅ Selected: {selection}")
     else:

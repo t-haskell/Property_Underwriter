@@ -7,7 +7,11 @@ import streamlit as st
 from ..core.models import Address, FlipAssumptions, RentalAssumptions
 from ..services.nominatim_places import get_address_from_suggestion, get_place_suggestions
 from ..utils.config import settings
-from .autocomplete_component import enhanced_address_autocomplete, instant_address_autocomplete
+from .autocomplete_component import (
+    enhanced_address_autocomplete,
+    instant_address_autocomplete,
+    format_suggestion_label,
+)
 
 
 RENTAL_DEFAULTS: Dict[str, float] = {
@@ -99,7 +103,7 @@ def address_input() -> Optional[Address]:
             st.session_state.manual_address_city = address.city
             st.session_state.manual_address_state = address.state
             st.session_state.manual_address_zip = address.zip
-            st.success(f"✅ Address selected: {selected_suggestion.get('description', '')}")
+            st.success(f"✅ Address selected: {format_suggestion_label(selected_suggestion)}")
     
     st.write("**Or enter manually:**")
     manual_line1 = st.text_input("Street Address", key="manual_address_line1")

@@ -9,6 +9,29 @@ import time
 import streamlit as st
 
 
+def format_suggestion_label(suggestion: Dict[str, str]) -> str:
+    """Return a concise, user-friendly label for an address suggestion."""
+    street = (suggestion.get("street") or suggestion.get("street_address") or "").strip()
+    city = (suggestion.get("city") or "").strip()
+    state = (suggestion.get("state") or "").strip()
+    postal = (suggestion.get("zip") or suggestion.get("postal_code") or "").strip()
+    fallback = (suggestion.get("description") or suggestion.get("text") or "").strip()
+
+    # Assemble `Street, City, ST ZIP` when possible.
+    locality = " ".join(part for part in [state, postal] if part).strip()
+    address_parts = [part for part in [street, city, locality] if part]
+    if address_parts:
+        return ", ".join(address_parts)
+
+    if fallback:
+        return fallback
+
+    fallback_identifier = suggestion.get("place_id", "").strip()
+    if fallback_identifier:
+        return f"Suggestion {fallback_identifier}"
+    return "Address suggestion"
+
+
 def enhanced_address_autocomplete(
     suggestions_func: Callable[[str], List[Dict[str, str]]],
     placeholder: str = "Start typing an address...",
@@ -71,7 +94,7 @@ def enhanced_address_autocomplete(
 
     if should_fetch:
         try:
-            suggestions = suggestions_func(trimmed_query)
+            suggestions = suggestions_func(trimmed_query, limit=max_suggestions)
             st.session_state[f"{key}_suggestions"] = suggestions[:max_suggestions]
             st.session_state[f"{key}_last_query"] = trimmed_query
             st.session_state[f"{key}_last_fetch_ts"] = now
@@ -89,27 +112,29 @@ def enhanced_address_autocomplete(
     suggestions = st.session_state[f"{key}_suggestions"]
     if suggestions:
         st.write("**Suggestions:**")
-        
-        # Create columns for suggestions
-        cols = st.columns(min(len(suggestions), 3))
-        
+
         for i, suggestion in enumerate(suggestions):
-            col_idx = i % 3
-            
-            with cols[col_idx]:
-                # Create a button for each suggestion
-                suggestion_text = suggestion.get("description", suggestion.get("text", ""))
+            base_label = format_suggestion_label(suggestion)
+            readable = base_label or suggestion.get("description", "") or f"Suggestion {i + 1}"
+            help_text = suggestion.get("description") or "Click to select this address"
+
+            label_col, button_col = st.columns([0.82, 0.18])
+            with label_col:
+                st.markdown(f"{i + 1}. {readable}")
+            with button_col:
                 if st.button(
-                    suggestion_text[:50] + "..." if len(suggestion_text) > 50 else suggestion_text,
+                    "Select",
                     key=f"{key}_suggestion_{i}",
-                    help="Click to select this address"
+                    help=help_text,
+                    use_container_width=True,
+                    type="primary",
                 ):
-                    # User selected this suggestion
                     st.session_state[f"{key}_selected"] = suggestion
-                    st.session_state[f"{key}_query"] = suggestion_text
-                    st.session_state[f"{key}_input"] = suggestion_text
+                    display_value = readable
+                    st.session_state[f"{key}_query"] = display_value
+                    st.session_state[f"{key}_input"] = display_value
                     st.session_state[f"{key}_suggestions"] = []
-                    st.session_state[f"{key}_last_query"] = suggestion_text
+                    st.session_state[f"{key}_last_query"] = display_value
                     st.session_state[f"{key}_last_fetch_ts"] = time.time()
                     st.rerun()
     
@@ -165,7 +190,7 @@ def instant_address_autocomplete(
     # Get suggestions if query changed and is long enough
     if query != st.session_state[f"{key}_last_query"] and len(query.strip()) >= 2:
         try:
-            suggestions = suggestions_func(query.strip())
+            suggestions = suggestions_func(query.strip(), limit=max_suggestions)
             st.session_state[f"{key}_suggestions"] = suggestions[:max_suggestions]
             st.session_state[f"{key}_last_query"] = query
         except Exception as e:
@@ -180,24 +205,27 @@ def instant_address_autocomplete(
     # Display suggestions as selectbox
     suggestions = st.session_state[f"{key}_suggestions"]
     if suggestions:
-        suggestion_options = [""] + [s.get("description", s.get("text", "")) for s in suggestions]
-        
-        selected_text = st.selectbox(
+        option_labels = ["Select an address"] + [
+            f"#{index + 1} {format_suggestion_label(s) or s.get('description', '').strip() or 'Suggestion'}"
+            for index, s in enumerate(suggestions)
+        ]
+
+        selected_option = st.selectbox(
             "Select an address:",
-            options=suggestion_options,
+            options=option_labels,
             key=f"{key}_selectbox",
             help="Choose from the suggestions above"
         )
-        
-        if selected_text:
-            # Find the selected suggestion
-            selected_suggestion = next(
-                (s for s in suggestions if s.get("description", s.get("text", "")) == selected_text),
-                None
-            )
-            if selected_suggestion:
+
+        if selected_option and selected_option != option_labels[0]:
+            selected_index = option_labels.index(selected_option) - 1
+            if 0 <= selected_index < len(suggestions):
+                selected_suggestion = suggestions[selected_index]
                 st.session_state[f"{key}_selected"] = selected_suggestion
-                st.session_state[f"{key}_query"] = selected_text
+                display_value = format_suggestion_label(selected_suggestion) or selected_suggestion.get("description", "")
+                st.session_state[f"{key}_query"] = display_value
+                st.session_state[f"{key}_suggestions"] = []
+                st.session_state[f"{key}_last_query"] = selected_option
                 st.rerun()
     
     # Return selected suggestion

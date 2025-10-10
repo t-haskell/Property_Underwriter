@@ -149,22 +149,40 @@ def health() -> dict[str, str]:
 
 
 @app.get("/api/places/suggest", response_model=SuggestionsResponse)
-def suggest_places(query: str) -> SuggestionsResponse:
+def suggest_places(query: str, limit: int = 5) -> SuggestionsResponse:
     if not query or len(query.strip()) < 2:
         return SuggestionsResponse(suggestions=[])
 
-    raw = get_place_suggestions(query.strip())
-    suggestions = [
-        Suggestion(
-            description=item.get("description", ""),
+    sanitized_limit = min(max(limit, 1), 10)
+    if sanitized_limit != limit:
+        logger.debug("Adjusted suggestion limit from %d to %d", limit, sanitized_limit)
+
+    raw = get_place_suggestions(query.strip(), limit=sanitized_limit)
+    suggestions = []
+    for index, item in enumerate(raw):
+        description = item.get("description", "")
+        if not description:
+            continue
+
+        suggestion = Suggestion(
+            description=description,
             place_id=str(item.get("place_id", "")),
+            street=item.get("street") or None,
+            city=item.get("city") or None,
+            state=item.get("state") or None,
+            zip=item.get("zip") or None,
             lat=item.get("lat"),
             lon=item.get("lon"),
         )
-        for item in raw
-        if item.get("description")
-    ]
-    logger.info(f"Suggestions: {suggestions}")
+        suggestions.append(suggestion)
+
+    logger.info(
+        "Prepared %d suggestion payloads for query '%s' (limit=%d)",
+        len(suggestions),
+        query,
+        sanitized_limit,
+    )
+    logger.debug("Suggestion payload details: %s", [s.dict() for s in suggestions])
     return SuggestionsResponse(suggestions=suggestions)
 
 
