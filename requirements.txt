@@ -1,6 +1,7 @@
 pydantic
 pydantic-settings
 requests
+httpx
 pytest
 fastapi
 uvicorn

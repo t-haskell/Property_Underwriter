@@ -1,3 +1,5 @@
+import pytest
+
 from src.core.models import Address, ApiSource, PropertyData
 from src.services import data_fetch
 from src.services.providers.mock import MockProvider
@@ -74,7 +76,42 @@ def test_fetch_property_uses_configured_providers(monkeypatch):
     provider = DummyProvider(data_one)
 
     monkeypatch.setattr(data_fetch, "_configured_providers", lambda: [provider])
+    monkeypatch.setattr(data_fetch, "MockProvider", lambda: pytest.fail("Mock fallback should not be used"))
 
     result = data_fetch.fetch_property(address)
     assert result is not None
     assert result.sources == [ApiSource.ZILLOW]
+
+
+def test_fetch_property_falls_back_to_mock(monkeypatch):
+    address = Address("456 Elm", "Boston", "MA", "02108")
+
+    class NullProvider(MockProvider):
+        def fetch(self, address: Address):
+            return None
+
+    fallback_data = PropertyData(
+        address=address,
+        beds=2,
+        baths=1,
+        sqft=900,
+        lot_sqft=None,
+        year_built=None,
+        market_value_estimate=None,
+        rent_estimate=1800,
+        annual_taxes=None,
+        closing_cost_estimate=None,
+        meta={"source": "mock"},
+        sources=[ApiSource.MOCK],
+    )
+
+    class _Mock(MockProvider):
+        def fetch(self, address: Address):
+            return fallback_data
+
+    monkeypatch.setattr(data_fetch, "_configured_providers", lambda: [NullProvider()])
+    monkeypatch.setattr(data_fetch, "MockProvider", lambda: _Mock())
+
+    result = data_fetch.fetch_property(address)
+
+    assert result == fallback_data

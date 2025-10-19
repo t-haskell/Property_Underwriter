@@ -44,22 +44,24 @@ def merge(a: PropertyData, b: PropertyData) -> PropertyData:
 def _configured_providers() -> List[PropertyDataProvider]:
     providers: List[PropertyDataProvider] = []
 
-    if settings.ZILLOW_API_KEY:
+    zillow_config = settings.zillow
+    if zillow_config.api_key:
         providers.append(
             ZillowProvider(
-                api_key=settings.ZILLOW_API_KEY,
-                base_url=settings.ZILLOW_BASE_URL,
-                timeout=settings.PROVIDER_TIMEOUT_SEC,
+                api_key=zillow_config.api_key,
+                base_url=zillow_config.base_url,
+                timeout=zillow_config.timeout,
             )
         )
 
-    if settings.RENTOMETER_API_KEY:
+    rentometer_config = settings.rentometer
+    if rentometer_config.api_key:
         providers.append(
             RentometerProvider(
-                api_key=settings.RENTOMETER_API_KEY,
-                base_url=settings.RENTOMETER_BASE_URL,
-                timeout=settings.PROVIDER_TIMEOUT_SEC,
-                default_bedrooms=settings.RENTOMETER_DEFAULT_BEDROOMS,
+                api_key=rentometer_config.api_key,
+                base_url=rentometer_config.base_url,
+                timeout=rentometer_config.timeout,
+                default_bedrooms=rentometer_config.default_bedrooms,
             )
         )
     if settings.ATTOM_API_KEY:
@@ -80,9 +82,6 @@ def _configured_providers() -> List[PropertyDataProvider]:
             )
         )
 
-    if not providers and settings.USE_MOCK_PROVIDER_IF_NO_KEYS:
-        providers.append(MockProvider())
-
     return providers
 
 def normalize_address(address: Address) -> Address:
@@ -101,10 +100,10 @@ def fetch_property(address: Address, use_mock_if_empty: bool = True) -> Optional
     # NORMALIZING THE ADDRESS
     address = normalize_address(address)
 
-    if not providers and use_mock_if_empty:
-        providers = [MockProvider()]
-
     if not providers:
+        if use_mock_if_empty:
+            logger.info("No providers configured; using mock fallback.")
+            return MockProvider().fetch(address)
         logger.warning("No property data providers configured; returning None.")
         return None
 
@@ -123,4 +122,15 @@ def fetch_property(address: Address, use_mock_if_empty: bool = True) -> Optional
 
         merged = data if merged is None else merge(merged, data)
 
-    return merged
+    if merged:
+        return merged
+
+    if use_mock_if_empty:
+        logger.info("No provider returned data; using mock fallback for %s", address)
+        try:
+            return MockProvider().fetch(address)
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.exception("MockProvider failed to generate fallback data: %s", exc)
+            return None
+
+    return None

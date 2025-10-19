@@ -10,6 +10,10 @@ class _MockResponse:
         self.status_code = status_code
         self.text = json.dumps(data)
 
+    @property
+    def is_error(self):
+        return self.status_code >= 400
+
     def json(self):
         return self._data
 
@@ -20,7 +24,7 @@ def test_rentometer_provider_maps_average(monkeypatch):
         assert params["api_key"] == "token"
         return _MockResponse({"data": {"average": 2450, "median": 2400, "sample_size": 50}})
 
-    monkeypatch.setattr("requests.get", fake_get)
+    monkeypatch.setattr("src.services.providers.rentometer.httpx.get", fake_get)
 
     provider = RentometerProvider(api_key="token", base_url="https://example.com", default_bedrooms=3)
     address = Address("1 Test", "Boston", "MA", "02108")
