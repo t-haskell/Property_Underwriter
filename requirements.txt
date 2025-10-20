@@ -3,6 +3,11 @@ pydantic-settings
 requests
 httpx
 pytest
+pytest-cov
+coverage
+ruff
+mypy
+types-requests
 fastapi
 uvicorn
 streamlit

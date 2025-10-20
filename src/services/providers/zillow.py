@@ -2,10 +2,7 @@ from __future__ import annotations
 
 from typing import Dict, Optional
 
-try:
-    import httpx
-except ImportError:  # pragma: no cover - exercised via stub in tests
-    from ...utils.httpx_stub import httpx
+import httpx
 
 from ...core.models import Address, ApiSource, PropertyData
 from ...utils.logging import logger

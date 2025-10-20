@@ -90,8 +90,10 @@ def _parse_address_components(components: List[Dict[str, object]]) -> Optional[A
     for component in components:
         long_name = component.get("long_name")
         short_name = component.get("short_name")
-        for comp_type in component.get("types", []):
-            mapping[comp_type] = str(long_name or short_name or "")
+        types = component.get("types", [])
+        if isinstance(types, list):
+            for comp_type in types:
+                mapping[str(comp_type)] = str(long_name or short_name or "")
 
     street_number = mapping.get("street_number", "").strip()
     route = mapping.get("route", "").strip()

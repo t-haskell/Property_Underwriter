@@ -1,15 +1,13 @@
 from __future__ import annotations
 
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Optional, Tuple
 
 import streamlit as st
 
 from ..core.models import Address, FlipAssumptions, RentalAssumptions
 from ..services.nominatim_places import get_address_from_suggestion, get_place_suggestions
-from ..utils.config import settings
 from .autocomplete_component import (
     enhanced_address_autocomplete,
-    instant_address_autocomplete,
     format_suggestion_label,
 )
 

@@ -93,12 +93,20 @@ underwriter/
 3. Add to `src/services/data_fetch.py`
 4. Update configuration in `src/utils/config.py`
 
-### Testing
+### Testing and Quality Checks
 ```bash
 python -m venv venv  # if you haven't created one yet
 source venv/bin/activate
 pip install -r requirements.txt
-pytest tests/
+
+# Linting
+ruff check .
+
+# Static type checks
+mypy src tests
+
+# Unit tests with coverage (generates coverage.xml)
+pytest --cov=src --cov-report=xml --cov-fail-under=45
 ```
 
 ### Scaffolding in-progress features
@@ -126,7 +134,10 @@ the `main` branch and performs the following steps:
 1. Checks out the repository code.
 2. Sets up Python 3.11 on the runner.
 3. Installs the dependencies listed in `requirements.txt`.
-4. Executes the test suite with `pytest`.
+4. Runs `ruff check .` to enforce the project's linting rules.
+5. Executes static type checks with `mypy src tests`.
+6. Runs the test suite with `pytest --cov=src --cov-report=xml --cov-fail-under=45`.
+7. Uploads the generated `coverage.xml` as a workflow artifact so contributors can inspect detailed coverage results.
 
 No additional configuration is required—any push or pull request to `main` will
 trigger the workflow automatically. You can monitor run results under the

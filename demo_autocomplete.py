@@ -4,9 +4,11 @@ This allows you to compare the different UX approaches.
 """
 
 import streamlit as st
-from src.ui.ui_components import address_input
-from src.ui.alternative_address_input import alternative_address_input
-from src.ui.autocomplete_component import enhanced_address_autocomplete, instant_address_autocomplete, format_suggestion_label
+from src.ui.autocomplete_component import (
+    enhanced_address_autocomplete,
+    format_suggestion_label,
+    instant_address_autocomplete,
+)
 from src.services.nominatim_places import get_place_suggestions
 
 st.set_page_config(page_title="Autocomplete Demo", layout="wide")

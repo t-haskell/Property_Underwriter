@@ -33,7 +33,7 @@ def format_suggestion_label(suggestion: Dict[str, str]) -> str:
 
 
 def enhanced_address_autocomplete(
-    suggestions_func: Callable[[str], List[Dict[str, str]]],
+    suggestions_func: Callable[..., List[Dict[str, str]]],
     placeholder: str = "Start typing an address...",
     max_suggestions: int = 5,
     key: str = "enhanced_address_autocomplete",
@@ -148,7 +148,7 @@ def enhanced_address_autocomplete(
 
 
 def instant_address_autocomplete(
-    suggestions_func: Callable[[str], List[Dict[str, str]]],
+    suggestions_func: Callable[..., List[Dict[str, str]]],
     placeholder: str = "Start typing an address...",
     max_suggestions: int = 5,
     key: str = "instant_address_autocomplete"

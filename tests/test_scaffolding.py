@@ -1,10 +1,10 @@
 from pathlib import Path
 
 import pytest
+from src.utils.scaffolding import ScaffoldingIncomplete, scaffold, scaffoldable
 
 pytest_plugins = ("pytester",)
 
-from src.utils.scaffolding import ScaffoldingIncomplete, scaffold, scaffoldable
 
 
 def test_scaffold_helper_raises_custom_exception():
