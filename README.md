@@ -99,6 +99,21 @@ pip install -r requirements.txt
 pytest tests/
 ```
 
+## Continuous Integration with GitHub Actions
+
+This repository includes an automated workflow defined in
+`.github/workflows/ci.yml`. The workflow runs on every push and pull request to
+the `main` branch and performs the following steps:
+
+1. Checks out the repository code.
+2. Sets up Python 3.11 on the runner.
+3. Installs the dependencies listed in `requirements.txt`.
+4. Executes the test suite with `pytest`.
+
+No additional configuration is required—any push or pull request to `main` will
+trigger the workflow automatically. You can monitor run results under the
+**Actions** tab of the GitHub repository.
+
 ## Next Steps
 
 - [ ] Real API integrations
