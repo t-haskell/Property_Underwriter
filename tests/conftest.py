@@ -1,3 +1,4 @@
+import importlib
 import sys
 from pathlib import Path
 
@@ -10,8 +11,8 @@ if str(ROOT) not in sys.path:
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from src.services.persistence import configure
-from src.utils.scaffolding import ScaffoldingIncomplete
+configure = importlib.import_module("src.services.persistence").configure
+ScaffoldingIncomplete = importlib.import_module("src.utils.scaffolding").ScaffoldingIncomplete
 
 
 @pytest.fixture(autouse=True)

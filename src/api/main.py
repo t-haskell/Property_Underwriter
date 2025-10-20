@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import List
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from ..core.models import (
@@ -21,7 +21,7 @@ from ..services.nominatim_places import (
     get_address_from_suggestion,
     get_place_suggestions,
 )
-from ..services.persistence import get_repository
+from ..services.persistence import PropertyRepository, get_repository
 from .schemas import (
     AddressPayload,
     FlipAnalysisRequest,
@@ -55,7 +55,11 @@ app.add_middleware(
     allow_headers=["*"],             # or enumerate needed headers
 )
 
-repository = get_repository()
+
+def _repository_dependency() -> PropertyRepository:
+    """Resolve a property repository using the latest configuration."""
+
+    return get_repository()
 
 def _address_from_payload(payload: AddressPayload) -> Address:
     return Address(
@@ -220,7 +224,10 @@ def property_fetch(payload: PropertyFetchRequest) -> PropertyFetchResponse:
 
 
 @app.post("/api/analyze/rental", response_model=RentalAnalysisResponse)
-def rental_analysis(payload: RentalAnalysisRequest) -> RentalAnalysisResponse:
+def rental_analysis(
+    payload: RentalAnalysisRequest,
+    repository: PropertyRepository = Depends(_repository_dependency),
+) -> RentalAnalysisResponse:
     property_data = _property_from_payload(payload.property)
     assumptions = _rental_assumptions_from_payload(payload.assumptions)
 
@@ -246,7 +253,10 @@ def rental_analysis(payload: RentalAnalysisRequest) -> RentalAnalysisResponse:
 
 
 @app.post("/api/analyze/flip", response_model=FlipAnalysisResponse)
-def flip_analysis(payload: FlipAnalysisRequest) -> FlipAnalysisResponse:
+def flip_analysis(
+    payload: FlipAnalysisRequest,
+    repository: PropertyRepository = Depends(_repository_dependency),
+) -> FlipAnalysisResponse:
     property_data = _property_from_payload(payload.property)
     assumptions = _flip_assumptions_from_payload(payload.assumptions)
 

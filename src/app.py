@@ -20,9 +20,6 @@ from src.utils.currency import usd
 from src.utils.logging import logger
 
 
-repository = get_repository()
-
-
 ResultType = Union[RentalResult, FlipResult]
 
 
@@ -74,6 +71,7 @@ if prop:
         if st.button("Run Rental Analysis"):
             logger.info("Running rental analysis for %s", prop.address)
             rental_result = analyze_rental(prop, rental_assumptions, rental_price)
+            repository = get_repository()
             repository.record_analysis(
                 prop,
                 analysis_type="rental",
@@ -88,6 +86,7 @@ if prop:
         if st.button("Run Flip Analysis"):
             logger.info("Running flip analysis for %s", prop.address)
             flip_result = analyze_flip(prop, flip_assumptions, flip_price)
+            repository = get_repository()
             repository.record_analysis(
                 prop,
                 analysis_type="flip",

@@ -97,7 +97,7 @@ def _configured_providers() -> List[PropertyDataProvider]:
 
 def normalize_address(address: Address) -> Address:
     return Address(
-        line1=address.line1.strip().upper() ,
+        line1=address.line1.strip().upper(),
         city=address.city.strip().upper(),
         state=address.state.strip().upper(),
         zip=address.zip.strip(),
