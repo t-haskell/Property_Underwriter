@@ -14,7 +14,7 @@ class DummyProvider(MockProvider):
 
 
 def test_merge_prefers_newer_values():
-    address = Address("123 Main", "Boston", "MA", "02108")
+    address = Address(line1="123 Main", city="Boston", state="MA", zip="02108")
     a = PropertyData(
         address=address,
         beds=3,
@@ -56,7 +56,7 @@ def test_merge_prefers_newer_values():
 
 
 def test_fetch_property_uses_configured_providers(monkeypatch):
-    address = Address("123 Main", "Boston", "MA", "02108")
+    address = Address(line1="123 Main", city="Boston", state="MA", zip="02108")
 
     data_one = PropertyData(
         address=address,
@@ -84,7 +84,7 @@ def test_fetch_property_uses_configured_providers(monkeypatch):
 
 
 def test_fetch_property_falls_back_to_mock(monkeypatch):
-    address = Address("456 Elm", "Boston", "MA", "02108")
+    address = Address(line1="456 Elm", city="Boston", state="MA", zip="02108")
 
     class NullProvider(MockProvider):
         def fetch(self, address: Address):

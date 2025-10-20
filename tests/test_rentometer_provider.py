@@ -27,7 +27,7 @@ def test_rentometer_provider_maps_average(monkeypatch):
     monkeypatch.setattr("src.services.providers.rentometer.httpx.get", fake_get)
 
     provider = RentometerProvider(api_key="token", base_url="https://example.com", default_bedrooms=3)
-    address = Address("1 Test", "Boston", "MA", "02108")
+    address = Address(line1="1 Test", city="Boston", state="MA", zip="02108")
 
     data = provider.fetch(address)
 
