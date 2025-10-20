@@ -128,7 +128,13 @@ To enable deployments:
 3. (Optional) Define a repository variable `NEXT_PUBLIC_BASE_PATH` if the site
    should be served from a custom sub-path. Leave it unset to default to the
    repository name (ideal for project pages) or set it to `/` for a root/custom
-   domain.
+   domain. The build workflow automatically trims any leading or trailing
+   slashes, so values such as `underwriter`, `/underwriter/`, or `//underwriter`
+   all resolve to the same final base path of `/underwriter`.
+
+After the workflow finishes, the static assets live in the `frontend/out`
+directory. You can also generate the export locally via `npm run export` in the
+`frontend` folder, which produces the exact same output that GitHub Pages serves.
 
 On every successful run the published site URL will be reported in the workflow
 summary, giving you a static URL that is always up to date with the `main`
