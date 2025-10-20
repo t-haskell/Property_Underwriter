@@ -22,6 +22,8 @@ const getSnapshot = (query: string) => () => {
 
 const getServerSnapshot = () => false;
 
+let motionPreferenceConsumers = 0;
+
 const useMediaQuery = (query: string) =>
   useSyncExternalStore(
     (listener) => subscribe(query, listener),
@@ -38,10 +40,19 @@ export const useMotionPreferences = () => {
     if (!isBrowser()) return;
     const attrValue = reducedMotion ? 'true' : 'false';
     document.documentElement.dataset.reducedMotion = attrValue;
-    return () => {
-      delete document.documentElement.dataset.reducedMotion;
-    };
   }, [reducedMotion]);
+
+  useEffect(() => {
+    if (!isBrowser()) return;
+    motionPreferenceConsumers += 1;
+
+    return () => {
+      motionPreferenceConsumers = Math.max(0, motionPreferenceConsumers - 1);
+      if (motionPreferenceConsumers === 0) {
+        delete document.documentElement.dataset.reducedMotion;
+      }
+    };
+  }, []);
 
   return {
     reducedMotion,

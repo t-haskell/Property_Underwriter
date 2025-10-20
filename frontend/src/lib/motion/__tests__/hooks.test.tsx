@@ -1,5 +1,5 @@
 import { renderHook } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useMotionPreferences, useStagger } from '../hooks';
 
 const createMatchMedia = () => {
@@ -33,6 +33,10 @@ const createMatchMedia = () => {
 };
 
 describe('useMotionPreferences', () => {
+  beforeEach(() => {
+    delete document.documentElement.dataset.reducedMotion;
+  });
+
   it('detects reduced motion preference', () => {
     const { matchMedia } = createMatchMedia();
     Object.defineProperty(window, 'matchMedia', {
@@ -43,6 +47,25 @@ describe('useMotionPreferences', () => {
     const { result } = renderHook(() => useMotionPreferences());
     expect(result.current.reducedMotion).toBe(true);
     expect(result.current.shouldReduceMotion).toBe(true);
+  });
+
+  it('preserves reduced motion attribute until last consumer unmounts', () => {
+    const { matchMedia } = createMatchMedia();
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      value: matchMedia,
+    });
+
+    const first = renderHook(() => useMotionPreferences());
+    const second = renderHook(() => useMotionPreferences());
+
+    expect(document.documentElement.dataset.reducedMotion).toBe('true');
+
+    first.unmount();
+    expect(document.documentElement.dataset.reducedMotion).toBe('true');
+
+    second.unmount();
+    expect(document.documentElement.dataset.reducedMotion).toBeUndefined();
   });
 });
 
