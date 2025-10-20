@@ -37,6 +37,9 @@ https://t-haskell.github.io/Property_Underwriter/
    | `CLOSINGCORP_API_KEY` | API key for ClosingCorp | _unset_ |
    | `CLOSINGCORP_BASE_URL` | Base URL for ClosingCorp API (if provided) | _unset_ |
    | `GOOGLE_PLACES_API_KEY` | API key for Google Places Autocomplete | _unset_ |
+   | `ESTATED_API_KEY` | API key for Estated property data (free developer tier available) | _unset_ |
+   | `ESTATED_BASE_URL` | Base URL for Estated API | `https://apis.estated.com/v4` |
+   | `DATABASE_URL` | SQLAlchemy database URL for persisted property and analysis data | `sqlite:///property_underwriter.db` |
    | `CACHE_TTL_MIN` | Cache time-to-live (minutes) | `60` |
    | `PROVIDER_TIMEOUT_SEC` | Timeout for provider HTTP requests | `10` |
    | `USE_MOCK_PROVIDER_IF_NO_KEYS` | Use mock data when no providers are configured | `true` |
@@ -65,8 +68,25 @@ underwriter/
 - **Mock Provider**: Deterministic test data (always available)
 - **Zillow**: Property details and market value estimates
 - **Rentometer**: Rental market data
+- **Estated**: Property characteristics, valuations, and rent estimates (free developer tier)
 - **ATTOM**: Property and tax information
 - **ClosingCorp**: Closing cost estimates
+
+### Relational Persistence
+
+The application now persists fetched property records and completed analyses in a
+SQL database using SQLAlchemy 2.0. By default a local SQLite database named
+`property_underwriter.db` is created in the project root, but any SQLAlchemy
+`DATABASE_URL` is supported (e.g., PostgreSQL, MySQL).
+
+- Each unique address is stored once and refreshed as new provider data arrives.
+- Rental and flip analyses are versioned so you can audit historical runs or
+  feed them into external reporting.
+- Tests automatically provision isolated, temporary SQLite databases; production
+  deployments should set `DATABASE_URL` via environment variable.
+
+Inspecting data is as simple as opening the SQLite file with your preferred
+client or pointing BI tools at the configured database.
 
 ## Analysis Types
 

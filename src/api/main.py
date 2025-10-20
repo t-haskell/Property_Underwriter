@@ -21,6 +21,7 @@ from ..services.nominatim_places import (
     get_address_from_suggestion,
     get_place_suggestions,
 )
+from ..services.persistence import get_repository
 from .schemas import (
     AddressPayload,
     FlipAnalysisRequest,
@@ -53,6 +54,8 @@ app.add_middleware(
     allow_methods=["*"],             # or enumerate (e.g., ["GET","POST"])
     allow_headers=["*"],             # or enumerate needed headers
 )
+
+repository = get_repository()
 
 def _address_from_payload(payload: AddressPayload) -> Address:
     return Address(
@@ -223,6 +226,15 @@ def rental_analysis(payload: RentalAnalysisRequest) -> RentalAnalysisResponse:
 
     result = analyze_rental(property_data, assumptions, payload.purchase_price)
 
+    repository.upsert_property(property_data)
+    repository.record_analysis(
+        property_data,
+        analysis_type="rental",
+        purchase_price=payload.purchase_price,
+        assumptions=assumptions.model_dump(),
+        result=result,
+    )
+
     return RentalAnalysisResponse(
         noi_annual=result.noi_annual,
         annual_debt_service=result.annual_debt_service,
@@ -239,6 +251,15 @@ def flip_analysis(payload: FlipAnalysisRequest) -> FlipAnalysisResponse:
     assumptions = _flip_assumptions_from_payload(payload.assumptions)
 
     result = analyze_flip(property_data, assumptions, payload.candidate_price)
+
+    repository.upsert_property(property_data)
+    repository.record_analysis(
+        property_data,
+        analysis_type="flip",
+        purchase_price=payload.candidate_price,
+        assumptions=assumptions.model_dump(),
+        result=result,
+    )
 
     return FlipAnalysisResponse(
         arv=result.arv,

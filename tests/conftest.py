@@ -2,12 +2,24 @@ import sys
 from pathlib import Path
 
 import pytest
-from src.utils.scaffolding import ScaffoldingIncomplete
 
-SRC = Path(__file__).resolve().parent.parent / "src"
+ROOT = Path(__file__).resolve().parent.parent
+SRC = ROOT / "src"
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
+from src.services.persistence import configure
+from src.utils.scaffolding import ScaffoldingIncomplete
+
+
+@pytest.fixture(autouse=True)
+def _configure_test_database(tmp_path) -> None:
+    """Ensure each test runs against an isolated SQLite database."""
+
+    db_path = tmp_path / "underwriter.db"
+    configure(f"sqlite+pysqlite:///{db_path}")
 
 
 @pytest.hookimpl(tryfirst=True, hookwrapper=True)

@@ -8,9 +8,11 @@ from ..utils.logging import logger
 from .providers.attom import AttomProvider
 from .providers.base import PropertyDataProvider
 from .providers.closingcorp import ClosingcorpProvider
+from .providers.estated import EstatedProvider
 from .providers.mock import MockProvider
 from .providers.rentometer import RentometerProvider
 from .providers.zillow import ZillowProvider
+from .persistence import get_repository
 
 
 def merge(a: PropertyData, b: PropertyData) -> PropertyData:
@@ -64,6 +66,15 @@ def _configured_providers() -> List[PropertyDataProvider]:
                 default_bedrooms=rentometer_config.default_bedrooms,
             )
         )
+    estated_config = settings.estated
+    if estated_config.api_key:
+        providers.append(
+            EstatedProvider(
+                api_key=estated_config.api_key,
+                base_url=estated_config.base_url,
+                timeout=estated_config.timeout,
+            )
+        )
     if settings.ATTOM_API_KEY:
         logger.info(f"Adding AttomProvider with API key: {settings.ATTOM_API_KEY}")
         providers.append(
@@ -102,13 +113,23 @@ def fetch_property(
     providers = _configured_providers()
     logger.info(f"Configured providers: {providers}")
 
-    # NORMALIZING THE ADDRESS
-    address = normalize_address(address)
+    repository = get_repository()
+    normalized_address = normalize_address(address)
+
+    cached = repository.get_property(normalized_address)
+    if cached:
+        logger.info("Returning cached property data for %s from persistence store", normalized_address)
+        return cached
+
+    address = normalized_address
 
     if not providers:
         if use_mock_if_empty:
             logger.info("No providers configured; using mock fallback.")
-            return MockProvider().fetch(address)
+            result = MockProvider().fetch(address)
+            if result:
+                repository.upsert_property(result)
+            return result
         logger.warning("No property data providers configured; returning None.")
         return None
 
@@ -128,12 +149,16 @@ def fetch_property(
         merged = data if merged is None else merge(merged, data)
 
     if merged:
+        repository.upsert_property(merged)
         return merged
 
     if use_mock_if_empty:
         logger.info("No provider returned data; using mock fallback for %s", address)
         try:
-            return MockProvider().fetch(address)
+            result = MockProvider().fetch(address)
+            if result:
+                repository.upsert_property(result)
+            return result
         except Exception as exc:  # pragma: no cover - defensive
             logger.exception("MockProvider failed to generate fallback data: %s", exc)
             return None
