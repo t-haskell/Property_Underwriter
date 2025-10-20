@@ -2,12 +2,12 @@ import sys
 from pathlib import Path
 
 import pytest
+from src.utils.scaffolding import ScaffoldingIncomplete
 
 SRC = Path(__file__).resolve().parent.parent / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from src.utils.scaffolding import ScaffoldingIncomplete
 
 
 @pytest.hookimpl(tryfirst=True, hookwrapper=True)
