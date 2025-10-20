@@ -8,7 +8,15 @@ import type {
   Suggestion,
 } from "../types";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL?.trim()?.replace(/\/+$/, "") ?? "http://localhost:8000";
+
+function buildApiUrl(path: string): string {
+  if (!API_BASE_URL) {
+    return path;
+  }
+  return `${API_BASE_URL}${path}`;
+}
 
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
@@ -19,15 +27,15 @@ async function handleResponse<T>(response: Response): Promise<T> {
 }
 
 export async function suggestPlaces(query: string): Promise<Suggestion[]> {
-  const url = new URL(`/api/places/suggest`, API_BASE_URL);
-  url.searchParams.set("query", query);
-  const response = await fetch(url.toString());
+  const searchParams = new URLSearchParams({ query });
+  const url = `${buildApiUrl("/api/places/suggest")}?${searchParams.toString()}`;
+  const response = await fetch(url);
   const data = await handleResponse<{ suggestions: Suggestion[] }>(response);
   return data.suggestions;
 }
 
 export async function resolveSuggestion(suggestion: Suggestion): Promise<Address | null> {
-  const response = await fetch(`${API_BASE_URL}/api/places/resolve`, {
+  const response = await fetch(buildApiUrl("/api/places/resolve"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ suggestion }),
@@ -37,7 +45,7 @@ export async function resolveSuggestion(suggestion: Suggestion): Promise<Address
 }
 
 export async function fetchProperty(address: Address): Promise<PropertyData> {
-  const response = await fetch(`${API_BASE_URL}/api/property/fetch`, {
+  const response = await fetch(buildApiUrl("/api/property/fetch"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ address }),
@@ -50,7 +58,7 @@ export async function runRentalAnalysis(
   assumptions: RentalAssumptions,
   purchase_price: number
 ): Promise<RentalResult> {
-  const response = await fetch(`${API_BASE_URL}/api/analyze/rental`, {
+  const response = await fetch(buildApiUrl("/api/analyze/rental"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ property, assumptions, purchase_price }),
@@ -63,7 +71,7 @@ export async function runFlipAnalysis(
   assumptions: FlipAssumptions,
   candidate_price: number
 ): Promise<FlipResult> {
-  const response = await fetch(`${API_BASE_URL}/api/analyze/flip`, {
+  const response = await fetch(buildApiUrl("/api/analyze/flip"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ property, assumptions, candidate_price }),
