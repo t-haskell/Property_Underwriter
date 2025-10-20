@@ -114,6 +114,26 @@ No additional configuration is required—any push or pull request to `main` wil
 trigger the workflow automatically. You can monitor run results under the
 **Actions** tab of the GitHub repository.
 
+## Continuous Deployment to GitHub Pages
+
+A complementary workflow at `.github/workflows/deploy.yml` builds the Next.js
+frontend and publishes the static export to GitHub Pages whenever changes are
+pushed to `main` (or when manually triggered).
+
+To enable deployments:
+
+1. Open **Settings → Pages** and select **GitHub Actions** as the deployment source.
+2. Add a repository secret named `NEXT_PUBLIC_API_BASE_URL` that points to the
+   running backend API the frontend should call.
+3. (Optional) Define a repository variable `NEXT_PUBLIC_BASE_PATH` if the site
+   should be served from a custom sub-path. Leave it unset to default to the
+   repository name (ideal for project pages) or set it to `/` for a root/custom
+   domain.
+
+On every successful run the published site URL will be reported in the workflow
+summary, giving you a static URL that is always up to date with the `main`
+branch.
+
 ## Next Steps
 
 - [ ] Real API integrations
