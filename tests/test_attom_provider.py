@@ -40,7 +40,7 @@ def test_attom_provider_maps_response(monkeypatch):
     monkeypatch.setattr("requests.get", fake_get)
 
     provider = AttomProvider(api_key="token", base_url="https://example.com")
-    address = Address("1 Test", "Boston", "MA", "02108")
+    address = Address(line1="1 Test", city="Boston", state="MA", zip="02108")
 
     data = provider.fetch(address)
 

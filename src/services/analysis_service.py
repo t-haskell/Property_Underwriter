@@ -39,7 +39,14 @@ def analyze_rental(pd: PropertyData, a: RentalAssumptions, price: float) -> Rent
     cash_flows.append(final_cash_flow)
     r_irr = irr(cash_flows)
     suggested = target_price_for_cap_rate(noi, a.target_cap_rate_pct) if a.target_cap_rate_pct else None
-    return RentalResult(noi, ads, cash_flow, cap, r_irr, suggested)
+    return RentalResult(
+        noi_annual=noi,
+        annual_debt_service=ads,
+        cash_flow_annual=cash_flow,
+        cap_rate_pct=cap,
+        irr_pct=r_irr,
+        suggested_purchase_price=suggested,
+    )
 
 def analyze_flip(pd: PropertyData, a: FlipAssumptions, candidate_price: float) -> FlipResult:
     arv = a.arv_override or (pd.market_value_estimate or 0.0)
@@ -52,4 +59,10 @@ def analyze_flip(pd: PropertyData, a: FlipAssumptions, candidate_price: float) -
     suggested = flip_suggested_purchase_price(arv, a.renovation_budget, soft, target_profit)
     profit = max(0.0, arv - total_costs)
     margin = 0.0 if total_costs == 0 else (profit / total_costs) * 100
-    return FlipResult(arv, total_costs, suggested, profit, margin)
+    return FlipResult(
+        arv=arv,
+        total_costs=total_costs,
+        suggested_purchase_price=suggested,
+        projected_profit=profit,
+        margin_pct=margin,
+    )

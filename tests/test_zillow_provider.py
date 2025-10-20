@@ -47,7 +47,7 @@ def test_zillow_provider_maps_response(monkeypatch):
     monkeypatch.setattr("src.services.providers.zillow.httpx.get", fake_get)
 
     provider = ZillowProvider(api_key="token", base_url="https://example.com", timeout=5)
-    address = Address("123 Main St", "Boston", "MA", "02108")
+    address = Address(line1="123 Main St", city="Boston", state="MA", zip="02108")
 
     data = provider.fetch(address)
 
