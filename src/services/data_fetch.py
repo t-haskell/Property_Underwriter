@@ -93,7 +93,12 @@ def normalize_address(address: Address) -> Address:
     )
 
 
-def fetch_property(address: Address, use_mock_if_empty: bool = True) -> Optional[PropertyData]:
+def fetch_property(
+    address: Address, use_mock_if_empty: Optional[bool] = None
+) -> Optional[PropertyData]:
+    if use_mock_if_empty is None:
+        use_mock_if_empty = settings.USE_MOCK_PROVIDER_IF_NO_KEYS
+
     providers = _configured_providers()
     logger.info(f"Configured providers: {providers}")
 
