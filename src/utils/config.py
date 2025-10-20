@@ -1,5 +1,25 @@
+from dataclasses import dataclass
+from functools import lru_cache
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
 from src.utils.logging import logger
+
+
+@dataclass(slots=True)
+class ZillowConfig:
+    api_key: str | None
+    base_url: str
+    timeout: int
+
+
+@dataclass(slots=True)
+class RentometerConfig:
+    api_key: str | None
+    base_url: str
+    timeout: int
+    default_bedrooms: int | None
+
 
 class Settings(BaseSettings):
     ZILLOW_API_KEY: str | None = None
@@ -23,5 +43,35 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
-logger.info(f"Settings: {Settings()}")
-settings = Settings()
+    @property
+    def zillow(self) -> ZillowConfig:
+        return ZillowConfig(
+            api_key=self.ZILLOW_API_KEY,
+            base_url=self.ZILLOW_BASE_URL,
+            timeout=self.PROVIDER_TIMEOUT_SEC,
+        )
+
+    @property
+    def rentometer(self) -> RentometerConfig:
+        return RentometerConfig(
+            api_key=self.RENTOMETER_API_KEY,
+            base_url=self.RENTOMETER_BASE_URL,
+            timeout=self.PROVIDER_TIMEOUT_SEC,
+            default_bedrooms=self.RENTOMETER_DEFAULT_BEDROOMS,
+        )
+
+
+@lru_cache(maxsize=1)
+def _get_settings() -> Settings:
+    settings = Settings()
+    configured = {
+        "zillow": bool(settings.ZILLOW_API_KEY),
+        "rentometer": bool(settings.RENTOMETER_API_KEY),
+        "attom": bool(settings.ATTOM_API_KEY),
+        "closingcorp": bool(settings.CLOSINGCORP_API_KEY),
+    }
+    logger.debug("Loaded settings (provider configured flags): %s", configured)
+    return settings
+
+
+settings = _get_settings()

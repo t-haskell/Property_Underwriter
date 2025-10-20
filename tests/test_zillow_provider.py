@@ -11,6 +11,10 @@ class _MockResponse:
         self.status_code = status_code
         self.text = json.dumps(data)
 
+    @property
+    def is_error(self):
+        return self.status_code >= 400
+
     def json(self):
         return self._data
 
@@ -40,7 +44,7 @@ def test_zillow_provider_maps_response(monkeypatch):
             )
         raise AssertionError(f"Unexpected URL {url}")
 
-    monkeypatch.setattr("requests.get", fake_get)
+    monkeypatch.setattr("src.services.providers.zillow.httpx.get", fake_get)
 
     provider = ZillowProvider(api_key="token", base_url="https://example.com", timeout=5)
     address = Address("123 Main St", "Boston", "MA", "02108")
