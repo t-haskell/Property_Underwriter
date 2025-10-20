@@ -2,9 +2,20 @@ import { renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useMotionPreferences, useStagger } from '../hooks';
 
-const createMatchMedia = () => {
+type MediaQueryMatches = Record<string, boolean>;
+
+const defaultMatches: MediaQueryMatches = {
+  '(prefers-reduced-motion: reduce)': true,
+  '(prefers-contrast: more)': false,
+  '(forced-colors: active)': false,
+};
+
+const createMatchMedia = (overrides: MediaQueryMatches = {}) => {
   let listeners: Array<(event: MediaQueryListEvent) => void> = [];
-  const createQuery = (matches: boolean) => {
+  const matchesByQuery = { ...defaultMatches, ...overrides };
+
+  const createQuery = (query: string) => {
+    const matches = Boolean(matchesByQuery[query]);
     return {
       matches,
       media: '',
@@ -23,12 +34,7 @@ const createMatchMedia = () => {
   };
 
   return {
-    matchMedia: vi.fn((query: string) => {
-      if (query.includes('prefers-reduced-motion')) {
-        return createQuery(true);
-      }
-      return createQuery(false);
-    }),
+    matchMedia: vi.fn((query: string) => createQuery(query)),
   };
 };
 
@@ -66,6 +72,24 @@ describe('useMotionPreferences', () => {
 
     second.unmount();
     expect(document.documentElement.dataset.reducedMotion).toBeUndefined();
+  });
+
+  it('keeps reduced motion attribute when forced colors imply reduced motion', () => {
+    const { matchMedia } = createMatchMedia({
+      '(prefers-reduced-motion: reduce)': false,
+      '(forced-colors: active)': true,
+    });
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      value: matchMedia,
+    });
+
+    const { result } = renderHook(() => useMotionPreferences());
+
+    expect(result.current.reducedMotion).toBe(false);
+    expect(result.current.forcedColors).toBe(true);
+    expect(result.current.shouldReduceMotion).toBe(true);
+    expect(document.documentElement.dataset.reducedMotion).toBe('true');
   });
 });
 

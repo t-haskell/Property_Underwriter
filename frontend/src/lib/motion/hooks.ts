@@ -35,12 +35,14 @@ export const useMotionPreferences = () => {
   const reducedMotion = useMediaQuery('(prefers-reduced-motion: reduce)');
   const prefersContrast = useMediaQuery('(prefers-contrast: more)');
   const forcedColors = useMediaQuery('(forced-colors: active)');
+  const shouldReduceMotion = reducedMotion || forcedColors;
 
   useEffect(() => {
     if (!isBrowser()) return;
-    const attrValue = reducedMotion ? 'true' : 'false';
-    document.documentElement.dataset.reducedMotion = attrValue;
-  }, [reducedMotion]);
+    document.documentElement.dataset.reducedMotion = shouldReduceMotion
+      ? 'true'
+      : 'false';
+  }, [shouldReduceMotion]);
 
   useEffect(() => {
     if (!isBrowser()) return;
@@ -58,7 +60,7 @@ export const useMotionPreferences = () => {
     reducedMotion,
     prefersContrast,
     forcedColors,
-    shouldReduceMotion: reducedMotion || forcedColors,
+    shouldReduceMotion,
   } as const;
 };
 
