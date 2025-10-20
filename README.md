@@ -101,6 +101,22 @@ pip install -r requirements.txt
 pytest tests/
 ```
 
+### Scaffolding in-progress features
+
+Use the helpers in `src/utils/scaffolding.py` while building new functionality that
+is not ready for production. They provide consistent logging, a dedicated
+`ScaffoldingIncomplete` exception, and Pytest integration that marks affected
+cases as skipped instead of failed.
+
+- Call `scaffold("Feature name")` inside branches that are still being
+  implemented.
+- Decorate placeholder functions with `@scaffoldable` (optionally passing a
+  `feature_name`) to automatically raise the custom exception when invoked.
+- The Pytest hook in `tests/conftest.py` converts any `ScaffoldingIncomplete`
+  errors into skipped tests so the test report highlights unfinished work.
+
+Remove the scaffold calls once the feature is complete.
+
 ## Continuous Integration with GitHub Actions
 
 This repository includes an automated workflow defined in
