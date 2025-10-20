@@ -85,7 +85,10 @@ def _normalize_state(state_value: Optional[str]) -> str:
     # Prefer the two-letter code if we already have one.
     if len(state_value) == 2 and state_value.upper() in STATE_NAME_TO_CODE.values():
         return state_value.upper()
-    return STATE_NAME_TO_CODE.get(state_value, STATE_NAME_TO_CODE.get(state_value.title(), ""))
+    normalized = STATE_NAME_TO_CODE.get(state_value)
+    if normalized:
+        return normalized
+    return STATE_NAME_TO_CODE.get(state_value.title(), "")
 
 
 def _extract_city(address: Dict[str, str]) -> str:
@@ -128,8 +131,10 @@ def _extract_street_line(address: Dict[str, str]) -> str:
 
     house_number = address.get("house_number") or ""
     # Some locations only have a name (e.g., "Empire State Building")
-    if not street and address.get("building"):
-        street = address.get("building")
+    if not street:
+        building = address.get("building")
+        if isinstance(building, str):
+            street = building
 
     components = [component for component in [house_number, street] if component]
     return " ".join(components)
@@ -162,14 +167,15 @@ def get_place_suggestions(query: str, country: Optional[str] = "us", limit: int 
         logger.debug("Skipping Nominatim lookup for blank query")
         return []
 
-    params = {
+    params: Dict[str, str] = {
         "q": trimmed_query,
         "format": "json",
-        "addressdetails": 1,
-        "limit": max(limit, 1),
-        "countrycodes": country.lower() if country else None,
-        "dedupe": 1,
+        "addressdetails": "1",
+        "limit": str(max(limit, 1)),
+        "dedupe": "1",
     }
+    if country:
+        params["countrycodes"] = country.lower()
 
     try:
         # Lightweight throttling to stay within Nominatim usage policy.

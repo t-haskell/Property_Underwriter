@@ -1,4 +1,3 @@
-import pytest
 from src.core.calculations import (
     annual_debt_service,
     cap_rate_pct,

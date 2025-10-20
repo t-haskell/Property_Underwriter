@@ -4,7 +4,6 @@ Test script for Zillow provider integration.
 Run this to test your Zillow API key and see the data returned.
 """
 
-import os
 from src.core.models import Address
 from src.services.providers.zillow import ZillowProvider
 from src.utils.config import settings

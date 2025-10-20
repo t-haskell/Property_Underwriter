@@ -1,5 +1,4 @@
 import json
-from unittest.mock import Mock
 
 from src.core.models import Address
 from src.services.providers.zillow import ZillowProvider

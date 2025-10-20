@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+from typing import Optional, Union
+
 import streamlit as st
 
+from src.core.models import FlipResult, RentalResult
 from src.services.analysis_service import analyze_flip, analyze_rental
 from src.services.data_fetch import fetch_property
 from src.ui.ui_components import (
@@ -14,6 +17,9 @@ from src.ui.ui_components import (
 )
 from src.utils.currency import usd
 from src.utils.logging import logger
+
+
+ResultType = Union[RentalResult, FlipResult]
 
 
 st.set_page_config(page_title="Property Underwriter", layout="wide")
@@ -33,11 +39,14 @@ addr = address_input()
 choice = analysis_choice()
 st.session_state.analysis_type = choice
 
+result_state: Optional[ResultType] = st.session_state.result
+
 if addr and st.button("Fetch Property Data"):
     st.session_state.address = addr
     logger.info("Fetching property data for %s", addr)
     st.session_state.property = fetch_property(addr)
     st.session_state.result = None
+    result_state = None
     reset_rental_form_state()
     reset_flip_form_state()
     st.success("Property data loaded (mock if APIs not configured).")
@@ -57,22 +66,23 @@ if prop:
         )
 
     if choice == "Rental Analysis":
-        assumptions, price = rental_form()
+        rental_assumptions, rental_price = rental_form()
         if st.button("Run Rental Analysis"):
             logger.info("Running rental analysis for %s", prop.address)
-            result = analyze_rental(prop, assumptions, price)
-            st.session_state.result = result
+            rental_result = analyze_rental(prop, rental_assumptions, rental_price)
+            result_state = rental_result
+            st.session_state.result = rental_result
     else:
-        assumptions, price = flip_form()
+        flip_assumptions, flip_price = flip_form()
         if st.button("Run Flip Analysis"):
             logger.info("Running flip analysis for %s", prop.address)
-            result = analyze_flip(prop, assumptions, price)
-            st.session_state.result = result
+            flip_result = analyze_flip(prop, flip_assumptions, flip_price)
+            result_state = flip_result
+            st.session_state.result = flip_result
 
-if st.session_state.result:
+if result_state:
     st.subheader("Results")
-    result = st.session_state.result
-    for key, value in result.__dict__.items():
+    for key, value in result_state.__dict__.items():
         if isinstance(value, (int, float)):
             st.write(f"- **{key}**: {usd(value)}")
         else:

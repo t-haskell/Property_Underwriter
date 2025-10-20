@@ -81,7 +81,8 @@ def irr(cash_flows: List[float], guess: float = 0.1, max_iter: int = 100) -> Opt
         for _ in range(max_iter):
             npv = sum(cf / (1 + r) ** i for i, cf in enumerate(cash_flows))
             d_npv = sum(-i * cf / (1 + r) ** (i + 1) for i, cf in enumerate(cash_flows) if i > 0)
-            if abs(npv) < 1e-6: return r * 100
+            if abs(npv) < 1e-6:
+                return r * 100
             r -= npv / d_npv if d_npv != 0 else 0.0
         return None
     except Exception:

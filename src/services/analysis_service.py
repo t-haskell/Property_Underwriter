@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import List, Optional
+from typing import List
 
 from ..core.models import FlipAssumptions, FlipResult, PropertyData, RentalAssumptions, RentalResult
 from ..core.calculations import (
