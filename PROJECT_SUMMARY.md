@@ -1,188 +1,98 @@
-# Property Underwriter MVP - Project Summary
+# Property Underwriter Platform – Project Summary
 
 ## 🎯 What We Built
 
-A complete, production-ready Streamlit application for property investment analysis with:
+An underwriting platform composed of a FastAPI backend, a modern Next.js frontend, and a legacy Streamlit app that all share the same analysis engine. Investors can fetch property data from multiple providers, run rental or flip scenarios, and persist their assumptions for later review.
 
-- **Rental Analysis**: NOI, cash flow, cap rate, and IRR calculations
-- **Flip Analysis**: ARV estimates, cost analysis, and profit margin calculations
-- **Clean Architecture**: Separated concerns for maintainability and testing
-- **Extensible Data Providers**: Mock data + placeholder APIs for real estate data sources
-- **Professional UI**: Streamlit-based interface with forms and results display
+- **REST API** serving underwriting workflows, address intelligence, and provider aggregation.
+- **Next.js UI** for guided address entry, assumption tuning, and rich JSON inspection of provider payloads.
+- **Streamlit prototype** that still exercises the same services for regression testing or rapid experimentation.
 
 ## 🏗️ Architecture Overview
 
 ```
-underwriter/
-├─ src/                          # Main application code
-│  ├─ app.py                    # Streamlit main application
-│  ├─ core/                     # Business logic & data models
-│  │  ├─ models.py             # Data classes & enums
-│  │  └─ calculations.py       # Financial calculation functions
-│  ├─ services/                 # Data & analysis services
-│  │  ├─ analysis_service.py   # Rental & flip analysis logic
-│  │  ├─ data_fetch.py         # Data provider coordination
-│  │  └─ providers/            # Data source implementations
-│  │     ├─ base.py            # Provider interface
-│  │     ├─ mock.py            # Test data provider
-│  │     ├─ zillow.py          # Zillow API (placeholder)
-│  │     ├─ rentometer.py      # Rent data (placeholder)
-│  │     ├─ attom.py           # Property data (placeholder)
-│  │     └─ closingcorp.py     # Closing costs (placeholder)
-│  ├─ ui/                       # Streamlit UI components
-│  │  └─ ui_components.py      # Forms & input widgets
-│  └─ utils/                    # Configuration & utilities
-│     ├─ config.py             # Environment & API keys
-│     ├─ cache.py              # Caching utilities
-│     ├─ currency.py           # Currency formatting
-│     └─ logging.py            # Logging configuration
-├─ tests/                       # Unit test suite
-│  ├─ test_calculations.py     # Core calculation tests
-│  └─ test_analysis_service.py # Analysis service tests
-├─ requirements.txt             # Python dependencies
-├─ .env.example                # Environment variables template
-├─ run.sh                      # Quick start script
-└─ README.md                   # Project documentation
+Property_Underwriter/
+├─ src/
+│  ├─ api/                  # FastAPI app + Pydantic schemas
+│  ├─ core/                 # Domain models and financial calculations
+│  ├─ services/             # Providers, analysis orchestration, persistence
+│  ├─ ui/                   # Streamlit widgets (legacy)
+│  └─ utils/                # Logging, config, currency helpers
+├─ frontend/                # Next.js 13 app (Tailwind, hooks, components)
+├─ tests/                   # Pytest coverage for calculations/services/persistence
+├─ run_api.sh               # FastAPI bootstrapper
+├─ run.sh                   # Streamlit bootstrapper
+└─ requirements.txt         # Python dependencies
 ```
+
+Key integrations:
+- **Provider adapters** (`src/services/providers/`) for Zillow, Rentometer, Estated, RentCast, Redfin (RapidAPI), ATTOM, ClosingCorp, and a deterministic mock provider.
+- **Address discovery** via Nominatim (`src/services/nominatim_places.py`) for autocomplete and resolution.
+- **SQLite persistence** managed by `src/services/persistence.py`, capturing properties, provider sources, and versioned analysis runs.
 
 ## 🚀 Quick Start
 
-### Option 1: Use the Quick Start Script
+### Backend (FastAPI)
 ```bash
-chmod +x run.sh
-./run.sh
-```
-
-### Option 2: Manual Setup
-```bash
-# Create virtual environment
 python3 -m venv venv
 source venv/bin/activate
-
-# Install dependencies
 pip install -r requirements.txt
-
-# Run the application
-streamlit run src/app.py
+export PYTHONPATH="$(pwd)${PYTHONPATH:+:$PYTHONPATH}"
+uvicorn src.api.main:app --reload --host 0.0.0.0 --port 8000
 ```
+The development server exposes the API on `http://localhost:8000` and initializes `property_underwriter.db` (configurable via `DATABASE_URL`).
 
-The app will open at `http://localhost:8501`
+### Frontend (Next.js)
+```bash
+cd frontend
+npm install
+npm run dev
+```
+Browse to http://localhost:3000. The UI talks to the backend on port 8000 by default; override with `NEXT_PUBLIC_API_BASE_URL` in `frontend/.env.local` when needed.
+
+### Streamlit (Optional)
+```bash
+./run.sh
+```
+Launches the original Streamlit interface, useful for quick demos or sanity checks.
 
 ## 🔧 Key Features
 
-### 1. **Rental Analysis**
-- Purchase price and financing assumptions
-- Operating expense calculations
-- NOI, cash flow, and cap rate analysis
-- IRR projections over hold period
-- Target purchase price suggestions
+### 1. Rental Analysis
+- Configurable purchase price, financing, vacancy, and reserves.
+- Outputs NOI, debt service, cash flow, cap rate, IRR, and suggested purchase price.
+- Persists each run with assumptions and results for auditability.
 
-### 2. **Flip Analysis**
-- Renovation budget planning
-- Hold time and carry cost considerations
-- ARV estimates and profit margin targets
-- Suggested purchase price calculations
-- Total cost breakdowns
+### 2. Flip Analysis
+- Accepts renovation budgets, holding costs, and desired margins.
+- Computes projected ARV, total costs, profit, and target price.
+- Stores historical runs for comparison.
 
-### 3. **Data Integration Ready**
-- Mock provider for immediate testing
-- Placeholder implementations for:
-  - Zillow (property values & details)
-  - Rentometer (rental market data)
-  - ATTOM (property & tax information)
-  - ClosingCorp (closing cost estimates)
+### 3. Data Integration & Persistence
+- Merges property snapshots across configured providers while keeping source provenance.
+- Caches provider payloads in SQLite to avoid duplicate calls and retain raw responses.
+- Falls back to deterministic mock data when no API keys are configured.
 
-### 4. **Professional Architecture**
-- Type-safe data models with dataclasses
-- Separated business logic and UI
-- Comprehensive unit test coverage
-- Environment-based configuration
-- Clean import structure
+### 4. Frontend Experience
+- Address autocomplete backed by Nominatim suggestions with immediate normalization.
+- Side-by-side summary and JSON payload explorer for merged property data and raw provider responses.
+- Distinct forms for rental vs. flip assumptions with sensible defaults.
 
-## 📊 Sample Data
-
-The mock provider supplies realistic test data:
-- **Property**: 3 bed, 2 bath, 1,600 sqft, built 1995
-- **Market Value**: $375,000
-- **Rent Estimate**: $2,450/month
-- **Annual Taxes**: $4,200
-- **Closing Costs**: $8,000
+## 📊 Sample Data Flow
+1. User searches for an address; Nominatim suggestions populate form fields.
+2. Frontend calls `POST /api/property/fetch`; backend aggregates provider data and persists a snapshot.
+3. User adjusts assumptions and triggers `POST /api/analyze/rental` or `/api/analyze/flip`.
+4. Backend computes results via `src/services/analysis_service.py` and returns a typed response, which is stored alongside the property.
 
 ## 🧪 Testing
+- **Backend**: `ruff check .`, `mypy src tests`, and `pytest --cov=src` validate style, types, and functionality.
+- **Frontend**: `npm run lint`, `npm test`, and Storybook (`npm run storybook`) cover component, accessibility, and interaction checks.
 
-Run the test suite:
-```bash
-source venv/bin/activate
-pytest tests/
-```
+## 🔮 Roadmap Notes
+- Expand provider coverage with production credentials and error handling.
+- Introduce caching/rate limiting for high-volume provider usage.
+- Enhance frontend visualizations (charts, comparisons) and export options.
+- Add authentication/authorization when multi-user access is required.
 
-Tests cover:
-- Financial calculations (mortgage, NOI, cap rates, IRR)
-- Analysis service logic
-- Edge cases and error conditions
+Keep this summary aligned with major architecture or workflow changes so contributors have an up-to-date mental model.
 
-## 🔮 Next Steps & Enhancements
-
-### Immediate (Week 1-2)
-- [ ] Implement real API integrations
-- [ ] Add data validation and error handling
-- [ ] Enhance UI with charts and visualizations
-
-### Short Term (Month 1-2)
-- [ ] Export functionality (PDF/Excel)
-- [ ] Data persistence (database integration)
-- [ ] User authentication system
-- [ ] Advanced analytics and sensitivity analysis
-
-### Medium Term (Month 3-6)
-- [ ] Comps analysis and market research
-- [ ] Portfolio management features
-- [ ] Background task processing
-- [ ] API rate limiting and caching
-
-### Long Term (6+ months)
-- [ ] Mobile app companion
-- [ ] Team collaboration features
-- [ ] Advanced reporting and analytics
-- [ ] Integration with property management systems
-
-## 💡 Development Notes
-
-### Adding New Data Providers
-1. Create provider in `src/services/providers/`
-2. Implement the `PropertyDataProvider` interface
-3. Add to `src/services/data_fetch.py`
-4. Update configuration in `src/utils/config.py`
-
-### Code Quality Features
-- **Type Hints**: Full type coverage for maintainability
-- **Dataclasses**: Clean, immutable data structures
-- **Error Handling**: Graceful fallbacks and user feedback
-- **Testing**: Comprehensive unit test coverage
-- **Documentation**: Clear docstrings and README
-
-### Performance Considerations
-- **Caching**: Built-in memoization for expensive calculations
-- **Lazy Loading**: Data providers only fetch when needed
-- **Streamlit Optimization**: Efficient state management and UI updates
-
-## 🎉 Success Metrics
-
-✅ **MVP Complete**: Fully functional application with mock data
-✅ **Clean Architecture**: Maintainable, testable codebase
-✅ **Professional UI**: Streamlit-based interface ready for users
-✅ **Extensible Design**: Easy to add new features and data sources
-✅ **Production Ready**: Virtual environment, dependencies, and deployment scripts
-
-## 🚨 Important Notes
-
-1. **API Keys**: Currently using mock data. Add real API keys to `.env` for production use
-2. **Virtual Environment**: Always activate `venv` before running or developing
-3. **Dependencies**: Core requirements are minimal (Streamlit + Pydantic)
-4. **Testing**: Run tests before deploying changes
-5. **Configuration**: Environment variables control API access and behavior
-
----
-
-**Status**: ✅ MVP Complete & Ready for Development
-**Next Action**: Add real API integrations or start building additional features 
