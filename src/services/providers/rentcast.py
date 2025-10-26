@@ -130,7 +130,11 @@ class RentcastProvider(PropertyDataProvider):
                 "accept": "application/json"}
 
         try:
-            address_parts = [params.get("address"), params.get("city"), params.get("state"), params.get("zipCode")]
+            ap1: str | None = None   # address
+            ap2: str | None = None   # city
+            ap3: str | None = None   # state
+            ap4: str | None = None   # zip code
+            address_parts = [p for p in (ap1, ap2, ap3, ap4) if p]
             rest_url = "%20".join(address_parts)
             logger.info("RentcastProvider: rest_url for %s: %s", url, rest_url)
             response = httpx.get(url + "?address=" + rest_url, headers=headers, timeout=self.timeout)
