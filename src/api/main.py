@@ -61,7 +61,7 @@ async def startup_event():
     """Initialize the database when the application starts."""
     from ..services.persistence import init_engine
     from pathlib import Path
-    import os
+
     
     # Get the project root directory
     project_root = Path(__file__).parent.parent.parent
