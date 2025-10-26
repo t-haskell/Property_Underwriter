@@ -44,6 +44,17 @@ export const Card = ({
     [interactive, shouldReduceMotion],
   );
 
+  // Extract HTML event handlers to avoid conflict with Framer Motion
+  const {
+    onAnimationStart,
+    onAnimationEnd,
+    onAnimationIteration,
+    onDragStart,
+    onDragEnd,
+    onDrag,
+    ...htmlProps
+  } = rest;
+
   return (
     <MotionBox
       preset="rise"
@@ -54,7 +65,7 @@ export const Card = ({
         className,
       )}
       {...hoverProps}
-      {...rest}
+      {...htmlProps}
     >
       {(heading || description) && (
         <div className="space-y-1">

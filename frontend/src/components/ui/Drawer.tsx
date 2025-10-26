@@ -11,7 +11,7 @@ import { durations, easings } from '@lib/motion/tokens';
 
 export type DrawerSide = 'left' | 'right';
 
-export interface DrawerProps extends HTMLAttributes<HTMLDivElement> {
+export interface DrawerProps extends Omit<HTMLAttributes<HTMLDivElement>, 'title'> {
   open: boolean;
   onClose: () => void;
   side?: DrawerSide;
@@ -90,6 +90,17 @@ export const Drawer = ({
     [shouldReduceMotion],
   );
 
+  // Extract HTML event handlers to avoid conflict with Framer Motion
+  const {
+    onAnimationStart,
+    onAnimationEnd,
+    onAnimationIteration,
+    onDragStart,
+    onDragEnd,
+    onDrag,
+    ...htmlProps
+  } = rest;
+
   if (!mounted) return null;
 
   const labelledBy = typeof title === 'string' ? headingId : undefined;
@@ -113,7 +124,7 @@ export const Drawer = ({
               aria-modal="true"
               aria-labelledby={labelledBy}
               {...panelMotion}
-              {...rest}
+              {...htmlProps}
             >
               {title && (
                 <h2 id={headingId} className="text-lg font-semibold">

@@ -42,6 +42,17 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       [shouldReduceMotion],
     );
 
+    // Extract HTML event handlers to avoid conflict with Framer Motion
+    const {
+      onAnimationStart,
+      onAnimationEnd,
+      onAnimationIteration,
+      onDragStart,
+      onDragEnd,
+      onDrag,
+      ...htmlProps
+    } = rest;
+
     return (
       <motion.button
         ref={ref}
@@ -50,7 +61,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         disabled={disabled}
         style={{ willChange: shouldReduceMotion ? undefined : 'transform' }}
         {...motionProps}
-        {...rest}
+        {...htmlProps}
       >
         {icon && <span aria-hidden className="inline-flex h-4 w-4 items-center justify-center">{icon}</span>}
         <span>{children}</span>

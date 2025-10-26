@@ -11,5 +11,7 @@ src/utils/__pycache__/logging.cpython-312.pyc
 
 frontend/out/
 *__init__*
-src/utils/__pycache__/__init__.cpython-312.pyc
-src/utils/__pycache__/logging.cpython-312.pyc
+__pycache__/
+*.pyc
+src/utils/__pycache__/*
+.vscode/*

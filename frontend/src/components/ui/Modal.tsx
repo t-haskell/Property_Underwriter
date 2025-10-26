@@ -9,7 +9,7 @@ import { MotionBox } from '@components/motion/MotionBox';
 import { useMotionPreferences } from '@lib/motion';
 import { durations, easings } from '@lib/motion/tokens';
 
-export interface ModalProps extends HTMLAttributes<HTMLDivElement> {
+export interface ModalProps extends Omit<HTMLAttributes<HTMLDivElement>, 'title'> {
   open: boolean;
   onClose: () => void;
   title?: ReactNode;
@@ -72,6 +72,17 @@ export const Modal = ({
     [shouldReduceMotion],
   );
 
+  // Extract HTML event handlers to avoid conflict with Framer Motion
+  const {
+    onAnimationStart,
+    onAnimationEnd,
+    onAnimationIteration,
+    onDragStart,
+    onDragEnd,
+    onDrag,
+    ...htmlProps
+  } = rest;
+
   if (!mounted) return null;
 
   const labelledBy = title ? headingId : undefined;
@@ -97,7 +108,7 @@ export const Modal = ({
               aria-modal="true"
               aria-labelledby={labelledBy}
               aria-describedby={describedBy}
-              {...rest}
+              {...htmlProps}
             >
               {(title || description) && (
                 <header className="space-y-2">
