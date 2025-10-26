@@ -26,8 +26,8 @@ async function handleResponse<T>(response: Response): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-export async function suggestPlaces(query: string): Promise<Suggestion[]> {
-  const searchParams = new URLSearchParams({ query });
+export async function suggestPlaces(query: string, limit: number = 5): Promise<Suggestion[]> {
+  const searchParams = new URLSearchParams({ query, limit: limit.toString() });
   const url = `${buildApiUrl("/api/places/suggest")}?${searchParams.toString()}`;
   const response = await fetch(url);
   const data = await handleResponse<{ suggestions: Suggestion[] }>(response);

@@ -18,11 +18,17 @@ class RentometerConfig:
     api_key: str | None
     base_url: str
     timeout: int
-    default_bedrooms: int | None
+    # default_bedrooms: int | None
 
 
 @dataclass(slots=True)
 class EstatedConfig:
+    api_key: str | None
+    base_url: str
+    timeout: int
+
+@dataclass(slots=True)
+class RentcastConfig:
     api_key: str | None
     base_url: str
     timeout: int
@@ -34,7 +40,7 @@ class Settings(BaseSettings):
 
     RENTOMETER_API_KEY: str | None = None
     RENTOMETER_BASE_URL: str = "https://www.rentometer.com/api/v1"
-    RENTOMETER_DEFAULT_BEDROOMS: int | None = None
+    # RENTOMETER_DEFAULT_BEDROOMS: int | None = None
 
     ATTOM_API_KEY: str | None = None
     ATTOM_BASE_URL: str = "https://api.gateway.attomdata.com/propertyapi/v1.0.0"
@@ -47,13 +53,33 @@ class Settings(BaseSettings):
     ESTATED_API_KEY: str | None = None
     ESTATED_BASE_URL: str = "https://apis.estated.com/v4"
 
+    RENTCAST_API_KEY: str | None = None
+    RENTCAST_BASE_URL: str = "https://api.rentcast.io/v1"
+
     DATABASE_URL: str = "sqlite:///property_underwriter.db"
+    # DATABASE_URL: str = "sqlite:///./property_underwriter.db"
 
     CACHE_TTL_MIN: int = 60
     PROVIDER_TIMEOUT_SEC: int = 10
     USE_MOCK_PROVIDER_IF_NO_KEYS: bool = True
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    # The `model_config` attribute is an instance of `pydantic.ConfigDict`.
+    # It holds the following configuration settings:
+    # {
+    #     "env_file": ".env",
+    #     "env_file_encoding": "utf-8",
+    #     "extra": "ignore",
+    # }
+
+
+    @property
+    def rentcast(self) -> RentcastConfig:
+        return RentcastConfig(
+            api_key=self.RENTCAST_API_KEY,
+            base_url=self.RENTCAST_BASE_URL,
+            timeout=self.PROVIDER_TIMEOUT_SEC,
+        )
 
     @property
     def zillow(self) -> ZillowConfig:
@@ -69,7 +95,7 @@ class Settings(BaseSettings):
             api_key=self.RENTOMETER_API_KEY,
             base_url=self.RENTOMETER_BASE_URL,
             timeout=self.PROVIDER_TIMEOUT_SEC,
-            default_bedrooms=self.RENTOMETER_DEFAULT_BEDROOMS,
+            # default_bedrooms=self.RENTOMETER_DEFAULT_BEDROOMS,
         )
 
     @property
@@ -90,6 +116,7 @@ def _get_settings() -> Settings:
         "attom": bool(settings.ATTOM_API_KEY),
         "closingcorp": bool(settings.CLOSINGCORP_API_KEY),
         "estated": bool(settings.ESTATED_API_KEY),
+        "rentcast": bool(settings.RENTCAST_API_KEY)
     }
     logger.debug("Loaded settings (provider configured flags): %s", configured)
     return settings

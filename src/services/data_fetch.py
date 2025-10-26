@@ -11,6 +11,7 @@ from .providers.closingcorp import ClosingcorpProvider
 from .providers.estated import EstatedProvider
 from .providers.mock import MockProvider
 from .providers.rentometer import RentometerProvider
+from .providers.rentcast import RentcastProvider
 from .providers.zillow import ZillowProvider
 from .persistence import get_repository
 
@@ -63,9 +64,9 @@ def _configured_providers() -> List[PropertyDataProvider]:
                 api_key=rentometer_config.api_key,
                 base_url=rentometer_config.base_url,
                 timeout=rentometer_config.timeout,
-                default_bedrooms=rentometer_config.default_bedrooms,
             )
         )
+
     estated_config = settings.estated
     if estated_config.api_key:
         providers.append(
@@ -75,6 +76,17 @@ def _configured_providers() -> List[PropertyDataProvider]:
                 timeout=estated_config.timeout,
             )
         )
+
+    rentcast_config = settings.rentcast
+    if rentcast_config.api_key:
+        providers.append(
+            RentcastProvider(
+                api_key=rentcast_config.api_key,
+                base_url=rentcast_config.base_url,
+                timeout=rentcast_config.timeout,
+            )
+        )
+
     if settings.ATTOM_API_KEY:
         logger.info(f"Adding AttomProvider with API key: {settings.ATTOM_API_KEY}")
         providers.append(
@@ -84,6 +96,7 @@ def _configured_providers() -> List[PropertyDataProvider]:
                 timeout=settings.PROVIDER_TIMEOUT_SEC,
             )
         )
+
     if settings.CLOSINGCORP_API_KEY:
         providers.append(
             ClosingcorpProvider(
@@ -118,8 +131,17 @@ def fetch_property(
 
     cached = repository.get_property(normalized_address)
     if cached:
-        logger.info("Returning cached property data for %s from persistence store", normalized_address)
-        return cached
+        if cached.meta.get("rentcast_raw"):
+            logger.info(
+                "Returning cached property data for %s from persistence store (with raw)",
+                normalized_address,
+            )
+            return cached
+        else:
+            logger.info(
+                "Cached property found for %s but missing rentcast_raw; will attempt refresh",
+                normalized_address,
+            )
 
     address = normalized_address
 

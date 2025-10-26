@@ -56,6 +56,27 @@ app.add_middleware(
 )
 
 
+@app.on_event("startup")
+async def startup_event():
+    """Initialize the database when the application starts."""
+    from ..services.persistence import init_engine
+    from pathlib import Path
+    import os
+    
+    # Get the project root directory
+    project_root = Path(__file__).parent.parent.parent
+    db_path = project_root / "property_underwriter.db"
+    
+    try:
+        # Use an absolute path for the database
+        database_url = f"sqlite:///{db_path}"
+        init_engine(database_url)
+        logger.info(f"Database initialized successfully at {db_path}")
+    except Exception as e:
+        logger.error(f"Failed to initialize database: {e}")
+        raise
+
+
 def _repository_dependency() -> PropertyRepository:
     """Resolve a property repository using the latest configuration."""
 
@@ -212,8 +233,11 @@ def resolve_suggestion(payload: SuggestionResolveRequest) -> SuggestionResolveRe
 @app.post("/api/property/fetch", response_model=PropertyFetchResponse)
 def property_fetch(payload: PropertyFetchRequest) -> PropertyFetchResponse:
     try:
+        logger.info("**********Entering property_fetch... for address: %s", payload.address)
         address = _address_from_payload(payload.address)
+        logger.info("**********Fetching property data for address: %s", address)
         property_data = fetch_property(address)
+        logger.debug("**********Fetched property data: %s", property_data)
     except Exception as exc:  # pragma: no cover - surface to client
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 

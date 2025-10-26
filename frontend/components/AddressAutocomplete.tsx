@@ -31,7 +31,7 @@ export function AddressAutocomplete({
       setIsLoading(true);
       setError(null);
       try {
-        const results = await suggestPlaces(current);
+        const results = await suggestPlaces(current, 10); // Request 10, get more after filtering
         // Keep only full addresses when the backend hasn't restarted yet
         const filtered = results.filter(isFullAddressClient);
         if (!ignore) {
@@ -140,7 +140,7 @@ function isFullAddressClient(s: Suggestion): boolean {
   const street = (s.street ?? "").trim();
   const city = (s.city ?? "").trim();
   const state = (s.state ?? "").trim();
-  const zip = (s.zip ?? "").trim();
-  if (!street || !city || !state || !zip) return false;
-  return /\d/.test(street); // basic house number check
+  // Make zip optional and remove the house number requirement
+  if (!street || !city || !state) return false;
+  return true; // Remove the /\d/.test(street) requirement
 }

@@ -2,6 +2,7 @@
 
 import { Dispatch, FormEvent, SetStateAction, useMemo, useState } from "react";
 import { AddressAutocomplete } from "../components/AddressAutocomplete";
+import JsonCodeBlock from "../components/JsonCodeBlock";
 import {
   fetchProperty,
   runFlipAnalysis,
@@ -121,6 +122,20 @@ export default function Home() {
     if (property.year_built) entries.push(["Year Built", property.year_built]);
 
     return entries;
+  }, [property]);
+
+  // Prefer full provider raw JSON (e.g., rentcast_raw) if present
+  const propertyRawForViewer = useMemo(() => {
+    if (!property) return null;
+    const raw = property.meta?.["rentcast_raw"] || property.meta?.["rentcastRaw"] || property.meta?.["provider_raw"];
+    if (raw && typeof raw === 'string') {
+      try {
+        return JSON.parse(raw);
+      } catch {
+        // fall through to property if parsing fails
+      }
+    }
+    return property;
   }, [property]);
 
   async function handleRentalSubmit(event: FormEvent) {
@@ -334,6 +349,14 @@ export default function Home() {
               </div>
             ))}
           </div>
+          <details style={{ marginTop: "1rem" }}>
+            <summary style={{ cursor: "pointer", userSelect: "none" }}>
+              View ALL property data scraped
+            </summary>
+            <div style={{ marginTop: "0.75rem" }}>
+              <JsonCodeBlock data={propertyRawForViewer ?? property} />
+            </div>
+          </details>
         </section>
       )}
 
