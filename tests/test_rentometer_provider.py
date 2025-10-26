@@ -35,3 +35,6 @@ def test_rentometer_provider_maps_average(monkeypatch):
     assert data.rent_estimate == 2450
     assert data.meta["median"] == "2400"
     assert data.sources[0].value == "rentometer"
+    assert json.loads(data.meta["rentometer_raw"]) == {
+        "data": {"average": 2450, "median": 2400, "sample_size": 50}
+    }

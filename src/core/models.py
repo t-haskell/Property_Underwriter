@@ -117,7 +117,8 @@ class ApiSource(str, Enum):
     ATTOM = "attom"
     CLOSINGCORP = "closingcorp"
     ESTATED = "estated"
-    RENTCAST="rentcast"
+    RENTCAST = "rentcast"
+    REDFIN = "redfin"
     MOCK = "mock"
 
 

@@ -1,5 +1,7 @@
 import json
 
+import json
+
 from src.core.models import Address
 from src.services.providers.attom import AttomProvider
 
@@ -49,3 +51,4 @@ def test_attom_provider_maps_response(monkeypatch):
     assert data.sqft == 1800
     assert data.lot_sqft == 5500
     assert data.annual_taxes == 4200
+    assert json.loads(data.meta["attom_raw"]) == attom_payload

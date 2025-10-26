@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Dict, Optional
 
+import json
 import httpx
 
 from ...core.models import Address, ApiSource, PropertyData
@@ -54,7 +55,7 @@ class RentometerProvider(PropertyDataProvider):
             logger.info("RentometerProvider: no rent estimate available for %s", formatted)
             return None
 
-        meta: Dict[str, str] = {}
+        meta: Dict[str, str] = {"rentometer_raw": json.dumps(payload)}
         for key in ("median", "percentile_25", "percentile_75", "sample_size"):
             value = data.get(key)
             if value is not None:

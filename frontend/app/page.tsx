@@ -1,6 +1,6 @@
 'use client';
 
-import { Dispatch, FormEvent, SetStateAction, useMemo, useState } from "react";
+import { Dispatch, FormEvent, SetStateAction, useEffect, useMemo, useState } from "react";
 import { AddressAutocomplete } from "../components/AddressAutocomplete";
 import JsonCodeBlock from "../components/JsonCodeBlock";
 import {
@@ -16,6 +16,8 @@ import type {
   Suggestion,
 } from "../types";
 import type { FlipAssumptions, RentalAssumptions } from "../types";
+
+const MERGED_PAYLOAD_KEY = "__merged_property__";
 
 const rentalDefaults = {
   purchasePrice: 350_000,
@@ -70,6 +72,16 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [isFetchingProperty, setIsFetchingProperty] = useState(false);
   const [isRunningAnalysis, setIsRunningAnalysis] = useState(false);
+  const [selectedRawKey, setSelectedRawKey] = useState<string>(MERGED_PAYLOAD_KEY);
+
+  const propertyIdentity = useMemo(() => {
+    if (!property) {
+      return null;
+    }
+    const addressKey = `${property.address.line1}|${property.address.city}|${property.address.state}|${property.address.zip}`;
+    const metaKey = property.meta ? Object.keys(property.meta).sort().join("|") : "";
+    return `${addressKey}|${metaKey}`;
+  }, [property]);
 
   function updateAddressField(field: keyof Address, value: string) {
     setAddress((prev) => ({ ...prev, [field]: value }));
@@ -125,18 +137,67 @@ export default function Home() {
   }, [property]);
 
   // Prefer full provider raw JSON (e.g., rentcast_raw) if present
+  const rawEntries = useMemo(() => {
+    if (!property?.meta) {
+      return [] as Array<{ key: string; label: string; value: unknown }>;
+    }
+
+    const formatLabel = (key: string) => {
+      const cleaned = key.replace(/_raw$/i, "");
+      if (!cleaned) return key;
+      return cleaned
+        .split(/[_-]/)
+        .filter(Boolean)
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(" ");
+    };
+
+    const entries = Object.entries(property.meta)
+      .filter(([key, value]) => key.toLowerCase().endsWith("_raw") && typeof value === "string")
+      .map(([key, value]) => {
+        let parsed: unknown = value;
+        try {
+          parsed = JSON.parse(value as string);
+        } catch {
+          parsed = value;
+        }
+        return { key, label: formatLabel(key), value: parsed };
+      });
+
+    return entries.sort((a, b) => a.label.localeCompare(b.label));
+  }, [property]);
+
+  useEffect(() => {
+    setSelectedRawKey(MERGED_PAYLOAD_KEY);
+  }, [propertyIdentity]);
+
+  useEffect(() => {
+    setSelectedRawKey((current) => {
+      if (!property || rawEntries.length === 0) {
+        return MERGED_PAYLOAD_KEY;
+      }
+
+      if (current === MERGED_PAYLOAD_KEY) {
+        return MERGED_PAYLOAD_KEY;
+      }
+
+      if (rawEntries.some((entry) => entry.key === current)) {
+        return current;
+      }
+
+      return rawEntries[0]?.key ?? MERGED_PAYLOAD_KEY;
+    });
+  }, [property, rawEntries]);
+
   const propertyRawForViewer = useMemo(() => {
     if (!property) return null;
-    const raw = property.meta?.["rentcast_raw"] || property.meta?.["rentcastRaw"] || property.meta?.["provider_raw"];
-    if (raw && typeof raw === 'string') {
-      try {
-        return JSON.parse(raw);
-      } catch {
-        // fall through to property if parsing fails
-      }
+    if (selectedRawKey === MERGED_PAYLOAD_KEY || rawEntries.length === 0) {
+      return property;
     }
-    return property;
-  }, [property]);
+
+    const match = rawEntries.find((entry) => entry.key === selectedRawKey);
+    return match?.value ?? property;
+  }, [property, rawEntries, selectedRawKey]);
 
   async function handleRentalSubmit(event: FormEvent) {
     event.preventDefault();
@@ -354,6 +415,34 @@ export default function Home() {
               View ALL property data scraped
             </summary>
             <div style={{ marginTop: "0.75rem" }}>
+              {rawEntries.length > 0 && (
+                <div
+                  style={{
+                    marginBottom: "0.75rem",
+                    display: "flex",
+                    gap: "0.5rem",
+                    flexWrap: "wrap",
+                    alignItems: "center",
+                  }}
+                >
+                  <label htmlFor="provider-payload-select" style={{ fontWeight: 500 }}>
+                    Provider response
+                  </label>
+                  <select
+                    id="provider-payload-select"
+                    value={selectedRawKey}
+                    onChange={(event) => setSelectedRawKey(event.target.value)}
+                    style={{ padding: "0.4rem 0.6rem", borderRadius: 8, border: "1px solid #CBD5F5" }}
+                  >
+                    <option value={MERGED_PAYLOAD_KEY}>Merged property snapshot</option>
+                    {rawEntries.map((entry) => (
+                      <option key={entry.key} value={entry.key}>
+                        {entry.label} JSON
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <JsonCodeBlock data={propertyRawForViewer ?? property} />
             </div>
           </details>

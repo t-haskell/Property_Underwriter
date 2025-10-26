@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import Dict, Optional
 
+import json
 import requests
 
 from ...core.models import Address, ApiSource, PropertyData
@@ -51,13 +52,12 @@ class ClosingcorpProvider(PropertyDataProvider):
                 return None
 
             payload = response.json()
+            meta: Dict[str, str] = {"closingcorp_raw": json.dumps(payload)}
             costs = payload.get("closing_costs") or {}
             estimate = costs.get("estimate")
 
             if estimate is None:
                 return None
-
-            meta: Dict[str, str] = {}
             for key in ("title", "taxes", "insurance", "lender", "recording"):
                 if key in costs and costs[key] is not None:
                     meta[key] = str(costs[key])

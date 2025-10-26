@@ -29,3 +29,4 @@ def test_closingcorp_provider_maps_response(monkeypatch):
     assert data is not None
     assert data.closing_cost_estimate == 8500
     assert data.meta["taxes"] == "2500"
+    assert json.loads(data.meta["closingcorp_raw"]) == {"closing_costs": {"estimate": 8500, "taxes": 2500}}

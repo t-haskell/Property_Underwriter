@@ -34,6 +34,14 @@ class RentcastConfig:
     timeout: int
 
 
+@dataclass(slots=True)
+class RedfinConfig:
+    api_key: str | None
+    base_url: str
+    timeout: int
+    host: str
+
+
 class Settings(BaseSettings):
     ZILLOW_API_KEY: str | None = None
     ZILLOW_BASE_URL: str = "https://api.bridgedataoutput.com/api/v2"
@@ -55,6 +63,10 @@ class Settings(BaseSettings):
 
     RENTCAST_API_KEY: str | None = None
     RENTCAST_BASE_URL: str = "https://api.rentcast.io/v1"
+
+    REDFIN_API_KEY: str | None = None
+    REDFIN_BASE_URL: str = "https://redfin-working-api1.p.rapidapi.com"
+    REDFIN_RAPIDAPI_HOST: str = "redfin-working-api1.p.rapidapi.com"
 
     DATABASE_URL: str = "sqlite:///property_underwriter.db"
     # DATABASE_URL: str = "sqlite:///./property_underwriter.db"
@@ -79,6 +91,15 @@ class Settings(BaseSettings):
             api_key=self.RENTCAST_API_KEY,
             base_url=self.RENTCAST_BASE_URL,
             timeout=self.PROVIDER_TIMEOUT_SEC,
+        )
+
+    @property
+    def redfin(self) -> RedfinConfig:
+        return RedfinConfig(
+            api_key=self.REDFIN_API_KEY,
+            base_url=self.REDFIN_BASE_URL,
+            timeout=self.PROVIDER_TIMEOUT_SEC,
+            host=self.REDFIN_RAPIDAPI_HOST,
         )
 
     @property
@@ -116,7 +137,8 @@ def _get_settings() -> Settings:
         "attom": bool(settings.ATTOM_API_KEY),
         "closingcorp": bool(settings.CLOSINGCORP_API_KEY),
         "estated": bool(settings.ESTATED_API_KEY),
-        "rentcast": bool(settings.RENTCAST_API_KEY)
+        "rentcast": bool(settings.RENTCAST_API_KEY),
+        "redfin": bool(settings.REDFIN_API_KEY),
     }
     logger.debug("Loaded settings (provider configured flags): %s", configured)
     return settings
