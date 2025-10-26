@@ -1,121 +1,128 @@
-# Property Underwriter MVP
+# Property Underwriter Platform
 
-A Streamlit-based property investment analysis tool for rental and flip analysis.
-
-https://t-haskell.github.io/Property_Underwriter/
+Property Underwriter is a two-tier application that helps real-estate investors analyze rental and flip opportunities. The backend exposes a REST API powered by FastAPI and SQLite persistence, while the frontend delivers an interactive underwriting experience with Next.js, TailwindCSS, and rich visual components. A legacy Streamlit UI is still available for rapid prototyping.
 
 ## Features
 
-- **Rental Analysis**: Calculate NOI, cash flow, cap rate, and IRR
-- **Flip Analysis**: Estimate ARV, costs, and profit margins
-- **Data Integration**: Mock data provider with extensible API integrations
-- **Clean Architecture**: Separated concerns for maintainability and testing
+- **Rental analysis** – Computes NOI, debt service, cap rate, IRR, and suggested purchase price using configurable assumptions.
+- **Flip analysis** – Projects ARV, carrying costs, profit margins, and purchase targets for renovation scenarios.
+- **Data aggregation** – Normalizes results from multiple providers (RentCast, Estated, Redfin, Zillow, Rentometer, ATTOM, ClosingCorp, and mock fallbacks) into a single `PropertyData` snapshot with provenance metadata.
+- **Address intelligence** – Offers search suggestions and structured address resolution using OpenStreetMap's Nominatim service to streamline data entry.
+- **Persistence layer** – Stores fetched properties and completed analyses in SQLite (or any SQLAlchemy-compatible database) with versioned history and raw provider payload retention.
+- **Modular architecture** – Business logic and calculations live in `src/core`, allowing independent evolution of the API surface, providers, and presentation layer.
 
-## Quick Start
+## System Architecture
 
-1. **Install dependencies**:
-   ```bash
-   pip install -r requirements.txt
-   ```
+```
+Property_Underwriter/
+├─ src/
+│  ├─ api/                    # FastAPI app, request/response schemas, persistence wiring
+│  ├─ core/                   # Domain models and financial calculations
+│  ├─ services/               # Providers, analysis orchestration, address lookup, caching
+│  ├─ ui/                     # Streamlit components (legacy)
+│  └─ utils/                  # Config, logging, currency helpers
+├─ frontend/                  # Next.js 13 app with hooks, components, and API client
+├─ tests/                     # Pytest suite for core calculations, services, persistence
+├─ run_api.sh                 # Convenience launcher for the FastAPI development server
+├─ run.sh                     # Legacy Streamlit launcher
+└─ requirements.txt           # Python dependencies
+```
 
-2. **Configure environment** (optional):
+### Backend (FastAPI)
+- Entry point: `src/api/main.py`
+- REST endpoints for health checks, address suggestions, property fetching, and rental/flip analyses.
+- SQLite-backed persistence managed by `src/services/persistence.py` with simple configuration via `DATABASE_URL`.
+- Uses provider adapters under `src/services/providers/` to enrich property snapshots.
+- Logging, settings, and caching utilities reside in `src/utils`.
+
+### Frontend (Next.js)
+- Entry point: `frontend/app/page.tsx`
+- Components under `frontend/components/` implement address autocomplete, assumption forms, and JSON payload viewers.
+- API interactions go through `frontend/lib/api.ts`, which targets the FastAPI server (default `http://localhost:8000`).
+- Styling delivered with TailwindCSS and motion utilities (`frontend/styles/`, `frontend/hooks/`).
+
+### Legacy Streamlit UI
+`src/app.py` provides the original Streamlit workflow. It exercises the same providers and analysis services, making it useful for quick demos or regression checks alongside the new web frontend.
+
+## Configuration
+
+1. Copy the backend environment template and populate provider keys as needed:
    ```bash
    cp .env.example .env
-   # Add your API keys to .env
+   # Edit .env to add API credentials
    ```
-   Available settings:
-
-   | Variable | Description | Default |
-   | --- | --- | --- |
-   | `ZILLOW_API_KEY` | API key for Zillow/Bridge Interactive | _unset_ |
-   | `ZILLOW_BASE_URL` | Base URL for the Zillow API wrapper | `https://api.bridgedataoutput.com/api/v2` |
-   | `RENTOMETER_API_KEY` | API key for Rentometer | _unset_ |
-   | `RENTOMETER_BASE_URL` | Base URL for Rentometer API | `https://www.rentometer.com/api/v1` |
-   | `RENTOMETER_DEFAULT_BEDROOMS` | Optional default bedroom count for Rentometer queries | _unset_ |
-   | `ATTOM_API_KEY` | API key for ATTOM | _unset_ |
-   | `ATTOM_BASE_URL` | Base URL for ATTOM API | `https://api.gateway.attomdata.com/propertyapi/v1.0.0` |
-   | `CLOSINGCORP_API_KEY` | API key for ClosingCorp | _unset_ |
-   | `CLOSINGCORP_BASE_URL` | Base URL for ClosingCorp API (if provided) | _unset_ |
-   | `GOOGLE_PLACES_API_KEY` | API key for Google Places Autocomplete | _unset_ |
-   | `ESTATED_API_KEY` | API key for Estated property data (free developer tier available) | _unset_ |
-   | `ESTATED_BASE_URL` | Base URL for Estated API | `https://apis.estated.com/v4` |
-   | `DATABASE_URL` | SQLAlchemy database URL for persisted property and analysis data | `sqlite:///property_underwriter.db` |
-   | `CACHE_TTL_MIN` | Cache time-to-live (minutes) | `60` |
-   | `PROVIDER_TIMEOUT_SEC` | Timeout for provider HTTP requests | `10` |
-   | `USE_MOCK_PROVIDER_IF_NO_KEYS` | Use mock data when no providers are configured | `true` |
-
-3. **Run the app**:
+2. (Optional) Configure the frontend API base URL by creating `frontend/.env.local`:
    ```bash
-   streamlit run src/app.py
+   echo "NEXT_PUBLIC_API_BASE_URL=http://localhost:8000" > frontend/.env.local
    ```
+   Omit this step if you are running the backend on the default host/port.
 
-## Architecture
+### Supported Environment Variables
+| Variable | Description | Default |
+| --- | --- | --- |
+| `DATABASE_URL` | SQLAlchemy database URL for persistence | `sqlite:///property_underwriter.db` |
+| `CACHE_TTL_MIN` | Minutes to cache provider responses | `60` |
+| `PROVIDER_TIMEOUT_SEC` | Timeout (seconds) for provider HTTP calls | `10` |
+| `USE_MOCK_PROVIDER_IF_NO_KEYS` | Fallback to deterministic mock data when providers are unconfigured | `true` |
+| `GOOGLE_PLACES_API_KEY` | Optional Google Places key (Nominatim is used by default) | _unset_ |
+| `ZILLOW_API_KEY`, `ZILLOW_BASE_URL` | Zillow / Bridge Interactive credentials | see `.env.example` |
+| `RENTOMETER_API_KEY`, `RENTOMETER_BASE_URL` | Rentometer credentials | see `.env.example` |
+| `ESTATED_API_KEY`, `ESTATED_BASE_URL` | Estated property API credentials | see `.env.example` |
+| `RENTCAST_API_KEY`, `RENTCAST_BASE_URL` | RentCast rental data credentials | see `.env.example` |
+| `REDFIN_API_KEY`, `REDFIN_BASE_URL`, `REDFIN_RAPIDAPI_HOST` | RapidAPI-backed Redfin client settings | see `.env.example` |
+| `ATTOM_API_KEY`, `ATTOM_BASE_URL` | ATTOM property API credentials | see `.env.example` |
+| `CLOSINGCORP_API_KEY`, `CLOSINGCORP_BASE_URL` | Closing cost data source credentials | see `.env.example` |
 
-```
-underwriter/
-├─ src/
-│  ├─ app.py                 # Main Streamlit application
-│  ├─ core/                  # Business logic and data models
-│  ├─ services/              # Data fetching and analysis services
-│  ├─ ui/                    # Streamlit UI components
-│  └─ utils/                 # Configuration and utilities
-├─ tests/                    # Unit tests
-└─ requirements.txt          # Python dependencies
-```
+## Running Locally
 
-## Data Providers
+### Prerequisites
+- Python 3.11+
+- Node.js 18+ and npm
 
-- **Mock Provider**: Deterministic test data (always available)
-- **Zillow**: Property details and market value estimates
-- **Rentometer**: Rental market data
-- **Estated**: Property characteristics, valuations, and rent estimates (free developer tier)
-- **ATTOM**: Property and tax information
-- **ClosingCorp**: Closing cost estimates
-
-### Relational Persistence
-
-The application now persists fetched property records and completed analyses in a
-SQL database using SQLAlchemy 2.0. By default a local SQLite database named
-`property_underwriter.db` is created in the project root, but any SQLAlchemy
-`DATABASE_URL` is supported (e.g., PostgreSQL, MySQL).
-
-- Each unique address is stored once and refreshed as new provider data arrives.
-- Rental and flip analyses are versioned so you can audit historical runs or
-  feed them into external reporting.
-- Tests automatically provision isolated, temporary SQLite databases; production
-  deployments should set `DATABASE_URL` via environment variable.
-
-Inspecting data is as simple as opening the SQLite file with your preferred
-client or pointing BI tools at the configured database.
-
-## Analysis Types
-
-### Rental Analysis
-- Net Operating Income (NOI)
-- Annual debt service
-- Cash flow projections
-- Cap rate calculations
-- IRR estimates
-- Target purchase price suggestions
-
-### Flip Analysis
-- After Repair Value (ARV) estimates
-- Total cost calculations
-- Profit margin analysis
-- Suggested purchase price
-- Hold time considerations
-
-## Development
-
-### Adding New Data Providers
-1. Create provider in `src/services/providers/`
-2. Implement the `PropertyDataProvider` interface
-3. Add to `src/services/data_fetch.py`
-4. Update configuration in `src/utils/config.py`
-
-### Testing and Quality Checks
+### 1. Start the FastAPI backend
 ```bash
-python -m venv venv  # if you haven't created one yet
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+export PYTHONPATH="$(pwd)${PYTHONPATH:+:$PYTHONPATH}"  # ensures local package resolution
+uvicorn src.api.main:app --reload --host 0.0.0.0 --port 8000
+```
+This will create/update the SQLite database at `property_underwriter.db` (or the path specified by `DATABASE_URL`).
+
+You can alternatively run `./run_api.sh` to perform the same setup and launch.
+
+### 2. Start the Next.js frontend
+```bash
+cd frontend
+npm install
+npm run dev
+```
+Open http://localhost:3000 in your browser. The development server proxies API calls to `http://localhost:8000` unless overridden by `NEXT_PUBLIC_API_BASE_URL`.
+
+### 3. (Optional) Launch the Streamlit UI
+```bash
+./run.sh
+```
+The Streamlit experience remains useful for quick prototypes or side-by-side validation of the API results.
+
+## API Overview
+
+| Method & Path | Description |
+| --- | --- |
+| `GET /health` | Simple health probe. |
+| `GET /api/places/suggest?query=` | Returns structured address suggestions from Nominatim. |
+| `POST /api/places/resolve` | Resolves a suggestion payload to a normalized address. |
+| `POST /api/property/fetch` | Fetches and merges provider data for an address. |
+| `POST /api/analyze/rental` | Runs the rental underwriting workflow. |
+| `POST /api/analyze/flip` | Runs the flip underwriting workflow. |
+
+All endpoints exchange `Address`, `PropertyData`, and assumptions/result schemas defined in `src/api/schemas.py`.
+
+## Testing & Quality
+
+### Backend
+```bash
+python -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 
@@ -125,77 +132,26 @@ ruff check .
 # Static type checks
 mypy src tests
 
-# Unit tests with coverage (generates coverage.xml)
+# Unit tests with coverage
 pytest --cov=src --cov-report=xml --cov-fail-under=45
 ```
 
-### Scaffolding in-progress features
+### Frontend
+```bash
+cd frontend
+npm install
+npm run lint
+npm test           # Vitest unit tests
+npm run storybook  # (optional) Component previews
+```
 
-Use the helpers in `src/utils/scaffolding.py` while building new functionality that
-is not ready for production. They provide consistent logging, a dedicated
-`ScaffoldingIncomplete` exception, and Pytest integration that marks affected
-cases as skipped instead of failed.
+## Development Tips
+- Provider implementations live in `src/services/providers/`; they all implement `PropertyDataProvider` from `base.py`.
+- `src/services/data_fetch.py` orchestrates provider calls, merges payloads, and persists results through `PropertyRepository`.
+- Financial math is isolated in `src/core/calculations.py` and is thoroughly unit-tested; keep new calculations deterministic.
+- Address search helpers reside in `src/services/nominatim_places.py`.
+- To inspect stored data, open `property_underwriter.db` with any SQLite client; the schema tracks properties, provider sources, and analysis runs.
 
-- Call `scaffold("Feature name")` inside branches that are still being
-  implemented.
-- Decorate placeholder functions with `@scaffoldable` (optionally passing a
-  `feature_name`) to automatically raise the custom exception when invoked.
-- The Pytest hook in `tests/conftest.py` converts any `ScaffoldingIncomplete`
-  errors into skipped tests so the test report highlights unfinished work.
-
-Remove the scaffold calls once the feature is complete.
-
-## Continuous Integration with GitHub Actions
-
-This repository includes an automated workflow defined in
-`.github/workflows/ci.yml`. The workflow runs on every push and pull request to
-the `main` branch and performs the following steps:
-
-1. Checks out the repository code.
-2. Sets up Python 3.11 on the runner.
-3. Installs the dependencies listed in `requirements.txt`.
-4. Runs `ruff check .` to enforce the project's linting rules.
-5. Executes static type checks with `mypy src tests`.
-6. Runs the test suite with `pytest --cov=src --cov-report=xml --cov-fail-under=45`.
-7. Uploads the generated `coverage.xml` as a workflow artifact so contributors can inspect detailed coverage results.
-
-No additional configuration is required—any push or pull request to `main` will
-trigger the workflow automatically. You can monitor run results under the
-**Actions** tab of the GitHub repository.
-
-## Continuous Deployment to GitHub Pages
-
-A complementary workflow at `.github/workflows/deploy.yml` builds the Next.js
-frontend and publishes the static export to GitHub Pages whenever changes are
-pushed to `main` (or when manually triggered).
-
-To enable deployments:
-
-1. Open **Settings → Pages** and select **GitHub Actions** as the deployment source.
-2. Add a repository secret named `NEXT_PUBLIC_API_BASE_URL` that points to the
-   running backend API the frontend should call.
-3. (Optional) Define a repository variable `NEXT_PUBLIC_BASE_PATH` if the site
-   should be served from a custom sub-path. Leave it unset to default to the
-   repository name (ideal for project pages) or set it to `/` for a root/custom
-   domain. The build workflow automatically trims any leading or trailing
-   slashes, so values such as `underwriter`, `/underwriter/`, or `//underwriter`
-   all resolve to the same final base path of `/underwriter`.
-
-After the workflow finishes, the static assets live in the `frontend/out`
-directory. You can also generate the export locally via `npm run export` in the
-`frontend` folder, which produces the exact same output that GitHub Pages serves.
-
-On every successful run the published site URL will be reported in the workflow
-summary, giving you a static URL that is always up to date with the `main`
-branch.
-
-## Next Steps
-
-- [ ] Real API integrations
-- [ ] Export functionality (PDF/Excel)
-- [ ] Data persistence
-- [ ] User authentication
-- [ ] Advanced analytics and charts
-- [ ] Comps analysis
-- [ ] Background task processing
+## Continuous Integration
+The GitHub Actions workflow (`.github/workflows/ci.yml`) validates every push with Ruff, MyPy, Pytest coverage, and uploads the coverage report. Extend the pipeline if you introduce additional checks (e.g., frontend linting or tests).
 
