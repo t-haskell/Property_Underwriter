@@ -129,7 +129,7 @@ function tokenize(input: string): Token[] {
       }
       if (i < len && (input[i] === 'e' || input[i] === 'E')) {
         i++;
-        if (input[i] === '+' || input[i] === '-') i++;
+        if (i < len && (input[i] === '+' || input[i] === '-')) i++;
         while (i < len && input[i] >= '0' && input[i] <= '9') i++;
       }
       tokens.push({ text: input.slice(start, i), type: 'number' });

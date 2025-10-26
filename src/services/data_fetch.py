@@ -137,11 +137,10 @@ def fetch_property(
                 normalized_address,
             )
             return cached
-        else:
-            logger.info(
-                "Cached property found for %s but missing rentcast_raw; will attempt refresh",
-                normalized_address,
-            )
+        logger.info(
+            "Cached property found for %s but missing rentcast_raw; will attempt refresh",
+            normalized_address,
+        )
 
     address = normalized_address
 
@@ -173,6 +172,13 @@ def fetch_property(
     if merged:
         repository.upsert_property(merged)
         return merged
+
+    if cached:
+        logger.info(
+            "Providers returned no data for %s; falling back to cached property snapshot",
+            address,
+        )
+        return cached
 
     if use_mock_if_empty:
         logger.info("No provider returned data; using mock fallback for %s", address)

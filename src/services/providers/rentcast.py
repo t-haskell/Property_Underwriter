@@ -130,15 +130,14 @@ class RentcastProvider(PropertyDataProvider):
                 "accept": "application/json"}
 
         try:
-            ap1: str | None = None   # address
-            ap2: str | None = None   # city
-            ap3: str | None = None   # state
-            ap4: str | None = None   # zip code
-            address_parts = [p for p in (ap1, ap2, ap3, ap4) if p]
-            rest_url = "%20".join(address_parts)
-            logger.info("RentcastProvider: rest_url for %s: %s", url, rest_url)
-            response = httpx.get(url + "?address=" + rest_url, headers=headers, timeout=self.timeout)
-            # logger.info("RentcastProvider: response for %s: %s", url, response.json())
+            safe_params = {key: value for key, value in params.items() if value}
+            logger.info("RentcastProvider: request %s params=%s", url, safe_params)
+            response = httpx.get(
+                url,
+                params=params,
+                headers=headers,
+                timeout=self.timeout,
+            )
             response.raise_for_status()
             return response 
         except httpx.HTTPStatusError as e:
