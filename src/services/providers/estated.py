@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 import httpx
 
@@ -36,10 +36,27 @@ class EstatedProvider(PropertyDataProvider):
             return None
 
         property_payload = payload.get("property") or payload
-        structure = property_payload.get("structure") or {}
-        land = property_payload.get("land") or {}
-        valuation = property_payload.get("valuation") or {}
-        tax_info = property_payload.get("tax") or {}
+        if not isinstance(property_payload, dict):
+            logger.error(
+                "EstatedProvider: unexpected property payload type %s", type(property_payload)
+            )
+            return None
+
+        structure = property_payload.get("structure")
+        if not isinstance(structure, dict):
+            structure = {}
+
+        land = property_payload.get("land")
+        if not isinstance(land, dict):
+            land = {}
+
+        valuation = property_payload.get("valuation")
+        if not isinstance(valuation, dict):
+            valuation = {}
+
+        tax_info = property_payload.get("tax")
+        if not isinstance(tax_info, dict):
+            tax_info = {}
 
         beds = self._coerce_float(
             structure.get("beds")
@@ -75,7 +92,11 @@ class EstatedProvider(PropertyDataProvider):
             meta["estated_identifier"] = str(identifier)
 
         market_section = valuation.get("market") or {}
-        market_value_section = market_section.get("value") if isinstance(market_section.get("value"), dict) else {}
+        market_value_section: Dict[str, Any] = {}
+        value_section = market_section.get("value")
+        if isinstance(value_section, dict):
+            market_value_section = value_section
+        
         valuation_dates = [
             valuation.get("as_of"),
             valuation.get("updated"),

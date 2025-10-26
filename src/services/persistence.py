@@ -237,7 +237,8 @@ class PropertyRepository:
                     """,
                     payload,
                 )
-                property_id = cursor.lastrowid
+                assert cursor.lastrowid is not None
+                property_id = int(cursor.lastrowid)
             else:
                 property_id = record["id"]
                 conn.execute(
@@ -286,7 +287,8 @@ class PropertyRepository:
                     """,
                     payload,
                 )
-                property_id = cursor.lastrowid
+                assert cursor.lastrowid is not None
+                property_id = int(cursor.lastrowid)
             else:
                 property_id = record["id"]
                 conn.execute(
