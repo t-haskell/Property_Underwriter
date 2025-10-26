@@ -1,7 +1,5 @@
 import json
 
-import json
-
 from src.core.models import Address
 from src.services.providers.attom import AttomProvider
 
