@@ -1,6 +1,7 @@
 from __future__ import annotations
 from typing import Dict, Optional
 
+import json
 import requests
 
 from ...core.models import Address, ApiSource, PropertyData
@@ -42,6 +43,7 @@ class AttomProvider(PropertyDataProvider):
                 return None
 
             payload = response.json()
+            meta: Dict[str, str] = {"attom_raw": json.dumps(payload)}
             properties = payload.get("property") or []
             if not properties:
                 return None
@@ -55,7 +57,6 @@ class AttomProvider(PropertyDataProvider):
             assessment = record.get("assessment", {}) or {}
             market = assessment.get("market") or {}
             tax = assessment.get("tax") or {}
-            meta: Dict[str, str] = {}
             legal1 = summary.get("legal1")
             if legal1 is not None:
                 meta["legal1"] = str(legal1)

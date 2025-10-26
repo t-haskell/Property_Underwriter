@@ -12,6 +12,7 @@ from .providers.estated import EstatedProvider
 from .providers.mock import MockProvider
 from .providers.rentometer import RentometerProvider
 from .providers.rentcast import RentcastProvider
+from .providers.redfin import RedfinProvider
 from .providers.zillow import ZillowProvider
 from .persistence import get_repository
 
@@ -87,6 +88,17 @@ def _configured_providers() -> List[PropertyDataProvider]:
             )
         )
 
+    redfin_config = settings.redfin
+    if redfin_config.api_key:
+        providers.append(
+            RedfinProvider(
+                api_key=redfin_config.api_key,
+                base_url=redfin_config.base_url,
+                timeout=redfin_config.timeout,
+                host=redfin_config.host,
+            )
+        )
+
     if settings.ATTOM_API_KEY:
         logger.info(f"Adding AttomProvider with API key: {settings.ATTOM_API_KEY}")
         providers.append(
@@ -131,20 +143,29 @@ def fetch_property(
 
     cached = repository.get_property(normalized_address)
     if cached:
-        if cached.meta.get("rentcast_raw"):
+        has_raw_payload = any(
+            key.lower().endswith("_raw") for key in (cached.meta or {}).keys()
+        )
+        if has_raw_payload:
             logger.info(
                 "Returning cached property data for %s from persistence store (with raw)",
                 normalized_address,
             )
             return cached
         logger.info(
-            "Cached property found for %s but missing rentcast_raw; will attempt refresh",
+            "Cached property found for %s but missing provider raw payload; attempting refresh",
             normalized_address,
         )
 
     address = normalized_address
 
     if not providers:
+        if cached:
+            logger.info(
+                "No providers configured; returning cached property data for %s",
+                normalized_address,
+            )
+            return cached
         if use_mock_if_empty:
             logger.info("No providers configured; using mock fallback.")
             result = MockProvider().fetch(address)

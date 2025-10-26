@@ -56,4 +56,18 @@ def test_zillow_provider_maps_response(monkeypatch):
     assert data.market_value_estimate == 375000
     assert data.rent_estimate == 2450
     assert data.meta["zpid"] == "12345"
+    assert json.loads(data.meta["zillow_raw"]) == {
+        "zpid": "12345",
+        "bedrooms": 3,
+        "bathrooms": 2.5,
+        "finishedSqFt": 1600,
+        "lotSizeSqFt": 6000,
+        "yearBuilt": 1995,
+        "zestimate": 375000,
+        "rentZestimate": 2450,
+        "taxAssessment": 4200,
+        "lastUpdated": "2023-09-01",
+        "zestimateConfidence": 7,
+    }
+    assert json.loads(data.meta["zillow_search_raw"]) == {"properties": [{"zpid": "12345"}]}
     assert len(calls) == 2

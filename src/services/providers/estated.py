@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 
+import json
 import httpx
 
 from ...core.models import Address, ApiSource, PropertyData
@@ -31,9 +32,11 @@ class EstatedProvider(PropertyDataProvider):
         if response is None:
             return None
 
-        payload = self._parse_response(response)
-        if payload is None:
+        parsed = self._parse_response(response)
+        if parsed is None:
             return None
+
+        raw_payload, payload = parsed
 
         property_payload = payload.get("property") or payload
         if not isinstance(property_payload, dict):
@@ -86,7 +89,7 @@ class EstatedProvider(PropertyDataProvider):
         rent_estimate = self._extract_rent_estimate(valuation)
         annual_taxes = self._extract_tax_amount(tax_info, valuation)
 
-        meta: Dict[str, str] = {}
+        meta: Dict[str, str] = {"estated_raw": json.dumps(raw_payload)}
         identifier = property_payload.get("identifier") or property_payload.get("id")
         if identifier:
             meta["estated_identifier"] = str(identifier)
@@ -163,7 +166,7 @@ class EstatedProvider(PropertyDataProvider):
 
         return response
 
-    def _parse_response(self, response: httpx.Response) -> Optional[dict]:
+    def _parse_response(self, response: httpx.Response) -> Optional[Tuple[dict, dict]]:
         try:
             payload = response.json()
         except ValueError:
@@ -177,7 +180,7 @@ class EstatedProvider(PropertyDataProvider):
 
         data = payload.get("data")
         if isinstance(data, dict):
-            return data
+            return payload, data
 
         logger.error("EstatedProvider: unexpected data payload type %s", type(data))
         return None

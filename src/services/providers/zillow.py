@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from typing import Dict, Optional
+from typing import Dict, Optional, Tuple
 
+import json
 import httpx
 
 from ...core.models import Address, ApiSource, PropertyData
@@ -26,10 +27,12 @@ class ZillowProvider(PropertyDataProvider):
         try:
             formatted_address = f"{address.line1}, {address.city}, {address.state} {address.zip}"
 
-            property_data = self._search_property(formatted_address)
-            if not property_data:
+            search_result = self._search_property(formatted_address)
+            if not search_result:
                 logger.info("ZillowProvider: no property found for %s", formatted_address)
                 return None
+
+            property_data, search_payload = search_result
 
             zpid = property_data.get("zpid")
             if not zpid:
@@ -40,7 +43,11 @@ class ZillowProvider(PropertyDataProvider):
             if not detailed_data:
                 return None
 
-            meta: Dict[str, str] = {}
+            meta: Dict[str, str] = {"zillow_raw": json.dumps(detailed_data)}
+            try:
+                meta["zillow_search_raw"] = json.dumps(search_payload)
+            except (TypeError, ValueError):
+                meta["zillow_search_raw"] = str(search_payload)
             for key in ("zpid", "lastUpdated", "zestimateConfidence"):
                 value = detailed_data.get(key)
                 if value is not None:
@@ -65,7 +72,7 @@ class ZillowProvider(PropertyDataProvider):
             logger.exception("Error fetching Zillow data for %s: %s", address, exc)
             return None
 
-    def _search_property(self, address: str) -> Optional[dict]:
+    def _search_property(self, address: str) -> Optional[Tuple[dict, dict]]:
         """Search for property by address to get ZPID."""
         headers = self._headers()
         params = {
@@ -99,10 +106,13 @@ class ZillowProvider(PropertyDataProvider):
         if isinstance(properties, list) and properties:
             first = properties[0]
             if isinstance(first, dict):
-                return first
+                return first, payload
             logger.error("ZillowProvider: unexpected property result type %s", type(first))
         elif properties:
             logger.error("ZillowProvider: unexpected properties payload type %s", type(properties))
+
+        if isinstance(properties, dict):
+            return properties, payload
 
         return None
 

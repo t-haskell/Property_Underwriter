@@ -1,3 +1,5 @@
+import json
+
 import httpx
 import pytest
 
@@ -77,6 +79,7 @@ def test_estated_provider_parses_success(monkeypatch, sample_address):
     assert result.meta["valuation_low"] == "410000.0"
     assert result.meta["valuation_high"] == "440000.0"
     assert result.meta["rent_estimate_date"] == "2024-02-15"
+    assert json.loads(result.meta["estated_raw"]) == payload
 
 
 def test_estated_provider_handles_failure(monkeypatch, sample_address):
