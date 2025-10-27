@@ -45,6 +45,8 @@ app = FastAPI(title="Property Underwriter API", version="0.1.0")
 ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    "https://t-haskell.github.io",
+    "https://propertyunderwriter-production.up.railway.app",
 ]
 
 app.add_middleware(
