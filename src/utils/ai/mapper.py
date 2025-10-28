@@ -11,12 +11,15 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from typing import Any, List, Mapping, Optional, Sequence, Tuple, Union
+from typing import TYPE_CHECKING, Any, List, Mapping, Optional, Protocol, Sequence, Tuple, Union, cast
 
 try:  # pragma: no cover - exercised when dependency is available
-    from openai import OpenAI
+    import openai
 except ImportError:  # pragma: no cover - allows tests without installing openai
-    OpenAI = None  # type: ignore[assignment]
+    openai = cast(Any, None)
+
+if TYPE_CHECKING:  # pragma: no cover - import only used for static type checking
+    from openai import OpenAI as OpenAIClient
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.core.models import Address, PropertyData
@@ -135,12 +138,28 @@ def _follow_path(payload: JSONDocument, path: Sequence[str]) -> Optional[_ValueR
     return _ValueResolution(current, traversed)
 
 
+class _ResponsesAPI(Protocol):
+    def parse(
+        self,
+        *,
+        model: str,
+        input: Sequence[Mapping[str, Any]],
+        response_format: type[PropertyDataPaths],
+    ) -> PropertyDataPaths:
+        ...
+
+
+class _OpenAIClientProtocol(Protocol):
+    responses: _ResponsesAPI
+
+
 class PropertyDataMapper:
     """Use an OpenAI Responses model to discover property data values in arbitrary JSON payloads."""
 
     def __init__(self, *, client: Optional[Any] = None, model: str = DEFAULT_MODEL_NAME) -> None:
-        if client is None:
-            if OpenAI is None:
+        resolved_client = client
+        if resolved_client is None:
+            if openai is None:
                 raise RuntimeError(
                     "openai package is required when no client is provided. Install the 'openai' dependency."
                 )
@@ -148,8 +167,8 @@ class PropertyDataMapper:
                 raise RuntimeError(
                     "OPENAI_API_KEY is not configured. Provide a client explicitly or set the environment variable."
                 )
-            client = OpenAI(api_key=settings.OPENAI_API_KEY)
-        self._client = client
+            resolved_client = openai.OpenAI(api_key=settings.OPENAI_API_KEY)
+        self._client = cast(_OpenAIClientProtocol, resolved_client)
         self._model = model
 
     def map_property_data(
