@@ -43,6 +43,9 @@ class RedfinConfig:
 
 
 class Settings(BaseSettings):
+    OPENAI_API_KEY: str | None = None
+    OPENAI_MODEL: str | None = "gpt-4o-mini"
+
     ZILLOW_API_KEY: str | None = None
     ZILLOW_BASE_URL: str = "https://api.bridgedataoutput.com/api/v2"
 
