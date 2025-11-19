@@ -193,10 +193,11 @@ class RentalAssumptions(DomainModel):
     hoa_annual: float
     property_mgmt_pct: float
     hold_period_years: int
+    closing_costs_pct: float = 3.0
     target_cap_rate_pct: Optional[float] = None
     target_irr_pct: Optional[float] = None
 
-    @field_validator("down_payment_pct", "vacancy_rate_pct", "property_mgmt_pct")
+    @field_validator("down_payment_pct", "vacancy_rate_pct", "property_mgmt_pct", "closing_costs_pct")
     @classmethod
     def _validate_percentage(cls, value: NumberLike, info):
         result = _coerce_non_negative_float(value, field_name=info.field_name)
@@ -299,6 +300,7 @@ class RentalResult(DomainModel):
     annual_debt_service: float
     cash_flow_annual: float
     cap_rate_pct: float
+    cash_on_cash_return_pct: float
     irr_pct: Optional[float]
     suggested_purchase_price: Optional[float]
 
@@ -316,10 +318,10 @@ class RentalResult(DomainModel):
         assert result is not None
         return result
 
-    @field_validator("cap_rate_pct", mode="before")
+    @field_validator("cap_rate_pct", "cash_on_cash_return_pct", mode="before")
     @classmethod
-    def _validate_cap_rate(cls, value: NumberLike):
-        result = _coerce_non_negative_float(value, field_name="cap_rate_pct", decimals=4)
+    def _validate_cap_rate(cls, value: NumberLike, info):
+        result = _coerce_number(value, field_name=info.field_name, allow_none=False, decimals=4)
         assert result is not None
         return result
 

@@ -9,7 +9,7 @@ import type {
 } from "../types";
 
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL?.trim()?.replace(/\/+$/, "") ?? "http://localhost:8000";
+  process.env.NEXT_PUBLIC_API_BASE_URL?.trim()?.replace(/\/+$/, "") ?? "http://127.0.0.1:8000";
 
 function buildApiUrl(path: string): string {
   if (!API_BASE_URL) {

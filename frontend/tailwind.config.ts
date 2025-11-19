@@ -13,12 +13,12 @@ const config: Config = {
     extend: {
       colors: {
         surface: 'rgb(var(--color-surface) / <alpha-value>)',
-        surfaceAlt: 'rgb(var(--color-surface-alt) / <alpha-value>)',
+        'surface-alt': 'rgb(var(--color-surface-alt) / <alpha-value>)',
         primary: 'rgb(var(--color-primary) / <alpha-value>)',
-        primaryMuted: 'rgb(var(--color-primary-muted) / <alpha-value>)',
+        'primary-muted': 'rgb(var(--color-primary-muted) / <alpha-value>)',
         accent: 'rgb(var(--color-accent) / <alpha-value>)',
         text: 'rgb(var(--color-text) / <alpha-value>)',
-        textMuted: 'rgb(var(--color-text-muted) / <alpha-value>)',
+        'text-muted': 'rgb(var(--color-text-muted) / <alpha-value>)',
         border: 'rgb(var(--color-border) / <alpha-value>)',
         danger: 'rgb(var(--color-danger) / <alpha-value>)',
       },

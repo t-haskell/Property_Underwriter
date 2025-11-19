@@ -1,6 +1,7 @@
 'use client';
 
 import { Dispatch, FormEvent, SetStateAction, useEffect, useMemo, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { AddressAutocomplete } from "../components/AddressAutocomplete";
 import JsonCodeBlock from "../components/JsonCodeBlock";
 import {
@@ -273,260 +274,305 @@ export default function Home() {
   }
 
   return (
-    <main style={{ maxWidth: 1200, margin: "0 auto", padding: "2rem 1.5rem" }}>
-      <header style={{ marginBottom: "2rem" }}>
-        <h1 style={{ fontSize: "2.25rem", marginBottom: "0.5rem" }}>
-          🏠 Property Underwriter
+    <main className="min-h-screen p-4 sm:p-8 lg:p-12 max-w-7xl mx-auto">
+      <motion.header
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mb-10 text-center"
+      >
+        <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight mb-4 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+          Property Underwriter
         </h1>
-        <p style={{ maxWidth: 720, lineHeight: 1.6 }}>
-          Fetch property data, compare rental and flip assumptions, and review the underwriting outputs in a modern web experience.
+        <p className="text-lg text-text-muted max-w-2xl mx-auto">
+          Professional-grade real estate analysis powered by multi-source data aggregation.
         </p>
-      </header>
+      </motion.header>
 
-      <section
-        style={{
-          background: "#fff",
-          padding: "1.5rem",
-          borderRadius: 16,
-          boxShadow: "0 10px 30px rgba(15, 23, 42, 0.05)",
-          marginBottom: "1.5rem",
-        }}
-      >
-        <h2 style={{ marginTop: 0 }}>Property Address</h2>
-
-        <div style={{ display: "grid", gap: "1.5rem" }}>
-          <AddressAutocomplete
-            query={searchQuery}
-            onQueryChange={setSearchQuery}
-            onAddressResolved={handleSuggestion}
-          />
-
-          <div style={{ display: "grid", gap: "0.75rem" }}>
-            <div>
-              <label className="field-label" htmlFor="line1">
-                Street Address
-              </label>
-              <input
-                id="line1"
-                value={address.line1}
-                onChange={(event) => updateAddressField("line1", event.target.value)}
-                placeholder="123 Main St"
-                className="field-input"
-              />
-            </div>
-            <div style={{ display: "grid", gap: "0.75rem", gridTemplateColumns: "2fr 1fr" }}>
-              <div>
-                <label className="field-label" htmlFor="city">
-                  City
-                </label>
-                <input
-                  id="city"
-                  value={address.city}
-                  onChange={(event) => updateAddressField("city", event.target.value)}
-                  placeholder="Boston"
-                  className="field-input"
-                />
-              </div>
-              <div>
-                <label className="field-label" htmlFor="state">
-                  State
-                </label>
-                <input
-                  id="state"
-                  value={address.state}
-                  onChange={(event) => updateAddressField("state", event.target.value.toUpperCase())}
-                  placeholder="MA"
-                  className="field-input"
-                  maxLength={2}
-                />
-              </div>
-            </div>
-            <div>
-              <label className="field-label" htmlFor="zip">
-                ZIP / Postal Code
-              </label>
-              <input
-                id="zip"
-                value={address.zip}
-                onChange={(event) => updateAddressField("zip", event.target.value)}
-                placeholder="02129"
-                className="field-input"
-              />
-            </div>
-          </div>
-
-          <form onSubmit={handleFetchProperty}>
-            <button className="primary-button" type="submit" disabled={isFetchingProperty}>
-              {isFetchingProperty ? "Fetching..." : "Fetch Property Data"}
-            </button>
-          </form>
-        </div>
-      </section>
-
-      <section
-        style={{
-          background: "#fff",
-          padding: "1.5rem",
-          borderRadius: 16,
-          boxShadow: "0 10px 30px rgba(15, 23, 42, 0.05)",
-          marginBottom: "1.5rem",
-        }}
-      >
-        <h2 style={{ marginTop: 0 }}>Analysis Type</h2>
-        <div style={{ display: "flex", gap: "1rem" }}>
-          <button
-            type="button"
-            className={analysisType === "rental" ? "chip chip-active" : "chip"}
-            onClick={() => setAnalysisType("rental")}
+      <div className="grid lg:grid-cols-12 gap-8">
+        <div className="lg:col-span-5 space-y-6">
+          {/* Address Section */}
+          <motion.section
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.1 }}
+            className="glass-card p-6"
           >
-            Rental Analysis
-          </button>
-          <button
-            type="button"
-            className={analysisType === "flip" ? "chip chip-active" : "chip"}
-            onClick={() => setAnalysisType("flip")}
-          >
-            Flip Analysis
-          </button>
-        </div>
-      </section>
+            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+              <span className="text-2xl">📍</span> Property Address
+            </h2>
 
-      {property && (
-        <section
-          style={{
-            background: "#fff",
-            padding: "1.5rem",
-            borderRadius: 16,
-            boxShadow: "0 10px 30px rgba(15, 23, 42, 0.05)",
-            marginBottom: "1.5rem",
-          }}
-        >
-          <h2 style={{ marginTop: 0 }}>Property Snapshot</h2>
-          <div style={{ display: "grid", gap: "0.6rem" }}>
-            {propertySummary?.map(([label, value]) => (
-              <div key={label} style={{ display: "flex", justifyContent: "space-between" }}>
-                <span style={{ fontWeight: 500 }}>{label}</span>
-                <span>{value}</span>
-              </div>
-            ))}
-          </div>
-          <details style={{ marginTop: "1rem" }}>
-            <summary style={{ cursor: "pointer", userSelect: "none" }}>
-              View ALL property data scraped
-            </summary>
-            <div style={{ marginTop: "0.75rem" }}>
-              {rawEntries.length > 0 && (
-                <div
-                  style={{
-                    marginBottom: "0.75rem",
-                    display: "flex",
-                    gap: "0.5rem",
-                    flexWrap: "wrap",
-                    alignItems: "center",
-                  }}
-                >
-                  <label htmlFor="provider-payload-select" style={{ fontWeight: 500 }}>
-                    Provider response
-                  </label>
-                  <select
-                    id="provider-payload-select"
-                    value={selectedRawKey}
-                    onChange={(event) => setSelectedRawKey(event.target.value)}
-                    style={{ padding: "0.4rem 0.6rem", borderRadius: 8, border: "1px solid #CBD5F5" }}
-                  >
-                    <option value={MERGED_PAYLOAD_KEY}>Merged property snapshot</option>
-                    {rawEntries.map((entry) => (
-                      <option key={entry.key} value={entry.key}>
-                        {entry.label} JSON
-                      </option>
-                    ))}
-                  </select>
+            <div className="space-y-4">
+              <AddressAutocomplete
+                query={searchQuery}
+                onQueryChange={setSearchQuery}
+                onAddressResolved={handleSuggestion}
+              />
+
+              <div className="space-y-3">
+                <div>
+                  <label className="field-label" htmlFor="line1">Street Address</label>
+                  <input
+                    id="line1"
+                    value={address.line1}
+                    onChange={(e) => updateAddressField("line1", e.target.value)}
+                    placeholder="123 Main St"
+                    className="field-input"
+                  />
                 </div>
-              )}
-              <JsonCodeBlock data={propertyRawForViewer ?? property} />
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="field-label" htmlFor="city">City</label>
+                    <input
+                      id="city"
+                      value={address.city}
+                      onChange={(e) => updateAddressField("city", e.target.value)}
+                      placeholder="Boston"
+                      className="field-input"
+                    />
+                  </div>
+                  <div>
+                    <label className="field-label" htmlFor="state">State</label>
+                    <input
+                      id="state"
+                      value={address.state}
+                      onChange={(e) => updateAddressField("state", e.target.value.toUpperCase())}
+                      placeholder="MA"
+                      className="field-input"
+                      maxLength={2}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="field-label" htmlFor="zip">ZIP Code</label>
+                  <input
+                    id="zip"
+                    value={address.zip}
+                    onChange={(e) => updateAddressField("zip", e.target.value)}
+                    placeholder="02129"
+                    className="field-input"
+                  />
+                </div>
+              </div>
+
+              <button
+                onClick={handleFetchProperty}
+                disabled={isFetchingProperty}
+                className="primary-button w-full mt-2"
+              >
+                {isFetchingProperty ? (
+                  <>
+                    <span className="animate-spin">↻</span> Fetching Data...
+                  </>
+                ) : (
+                  "Fetch Property Data"
+                )}
+              </button>
             </div>
-          </details>
-        </section>
-      )}
+          </motion.section>
 
-      <section
-        style={{
-          background: "#fff",
-          padding: "1.5rem",
-          borderRadius: 16,
-          boxShadow: "0 10px 30px rgba(15, 23, 42, 0.05)",
-          marginBottom: "1.5rem",
-        }}
-      >
-        {analysisType === "rental" ? (
-          <RentalForm
-            formState={rentalForm}
-            setFormState={setRentalForm}
-            onSubmit={handleRentalSubmit}
-            disabled={isRunningAnalysis}
-          />
-        ) : (
-          <FlipForm
-            formState={flipForm}
-            setFormState={setFlipForm}
-            onSubmit={handleFlipSubmit}
-            disabled={isRunningAnalysis}
-          />
-        )}
-      </section>
-
-      {(rentalResult || flipResult) && (
-        <section
-          style={{
-            background: "#fff",
-            padding: "1.5rem",
-            borderRadius: 16,
-            boxShadow: "0 10px 30px rgba(15, 23, 42, 0.05)",
-            marginBottom: "1.5rem",
-          }}
-        >
-          <h2 style={{ marginTop: 0 }}>Results</h2>
-          <div style={{ display: "grid", gap: "0.75rem" }}>
-            {rentalResult && (
-              <ResultsCard
-                title="Rental Analysis"
-                entries={[
-                  ["Net Operating Income", formatCurrency(rentalResult.noi_annual)],
-                  ["Annual Debt Service", formatCurrency(rentalResult.annual_debt_service)],
-                  ["Annual Cash Flow", formatCurrency(rentalResult.cash_flow_annual)],
-                  ["Cap Rate", `${rentalResult.cap_rate_pct.toFixed(2)}%`],
-                  ["IRR", rentalResult.irr_pct ? `${rentalResult.irr_pct.toFixed(2)}%` : "—"],
-                  [
-                    "Suggested Purchase Price",
-                    rentalResult.suggested_purchase_price
-                      ? formatCurrency(rentalResult.suggested_purchase_price)
-                      : "—",
-                  ],
-                ]}
+          {/* Analysis Type Toggle */}
+          <motion.section
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.2 }}
+            className="glass-card p-6"
+          >
+            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+              <span className="text-2xl">📊</span> Analysis Strategy
+            </h2>
+            <div className="flex p-1 bg-surface-alt/50 rounded-xl border border-border/50 relative">
+              <div className="absolute inset-1 bg-white rounded-lg shadow-sm transition-all duration-300"
+                style={{
+                  width: 'calc(50% - 0.5rem)',
+                  left: analysisType === 'rental' ? '0.25rem' : 'calc(50% + 0.25rem)'
+                }}
               />
-            )}
-            {flipResult && (
-              <ResultsCard
-                title="Flip Analysis"
-                entries={[
-                  ["After Repair Value", formatCurrency(flipResult.arv)],
-                  ["Total Costs", formatCurrency(flipResult.total_costs)],
-                  ["Suggested Purchase Price", formatCurrency(flipResult.suggested_purchase_price)],
-                  ["Projected Profit", formatCurrency(flipResult.projected_profit)],
-                  ["Margin", `${flipResult.margin_pct.toFixed(2)}%`],
-                ]}
-              />
-            )}
-          </div>
-        </section>
-      )}
+              <button
+                type="button"
+                className={`flex-1 relative z-10 py-2 text-sm font-medium rounded-lg transition-colors duration-200 ${analysisType === "rental" ? "text-primary" : "text-text-muted hover:text-text"
+                  }`}
+                onClick={() => setAnalysisType("rental")}
+              >
+                Rental Strategy
+              </button>
+              <button
+                type="button"
+                className={`flex-1 relative z-10 py-2 text-sm font-medium rounded-lg transition-colors duration-200 ${analysisType === "flip" ? "text-primary" : "text-text-muted hover:text-text"
+                  }`}
+                onClick={() => setAnalysisType("flip")}
+              >
+                Flip Strategy
+              </button>
+            </div>
+          </motion.section>
 
-      {(status || error) && (
-        <section style={{ marginBottom: "2rem" }}>
-          {status && <p style={{ color: "#047857" }}>{status}</p>}
-          {error && <p style={{ color: "#b91c1c" }}>{error}</p>}
-        </section>
-      )}
+          {/* Assumptions Form */}
+          <motion.section
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.3 }}
+            className="glass-card p-6"
+          >
+            <AnimatePresence mode="wait">
+              {analysisType === "rental" ? (
+                <motion.div
+                  key="rental-form"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <RentalForm
+                    formState={rentalForm}
+                    setFormState={setRentalForm}
+                    onSubmit={handleRentalSubmit}
+                    disabled={isRunningAnalysis}
+                  />
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="flip-form"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <FlipForm
+                    formState={flipForm}
+                    setFormState={setFlipForm}
+                    onSubmit={handleFlipSubmit}
+                    disabled={isRunningAnalysis}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.section>
+        </div>
+
+        <div className="lg:col-span-7 space-y-6">
+          {/* Status Messages */}
+          <AnimatePresence>
+            {(status || error) && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className={`rounded-xl p-4 border ${error
+                  ? "bg-red-50 border-red-200 text-red-700"
+                  : "bg-emerald-50 border-emerald-200 text-emerald-700"
+                  }`}
+              >
+                {status && <p className="flex items-center gap-2">✅ {status}</p>}
+                {error && <p className="flex items-center gap-2">⚠️ {error}</p>}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Results Section */}
+          <AnimatePresence>
+            {(rentalResult || flipResult) && (
+              <motion.section
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="glass-card p-8 border-primary/20 ring-1 ring-primary/10"
+              >
+                <h2 className="text-2xl font-bold mb-6 flex items-center gap-2 text-primary">
+                  <span className="text-3xl">📈</span> Analysis Results
+                </h2>
+                <div className="grid gap-4">
+                  {rentalResult && (
+                    <ResultsCard
+                      entries={[
+                        ["Net Operating Income", formatCurrency(rentalResult.noi_annual)],
+                        ["Annual Debt Service", formatCurrency(rentalResult.annual_debt_service)],
+                        ["Annual Cash Flow", formatCurrency(rentalResult.cash_flow_annual)],
+                        ["Cap Rate", `${rentalResult.cap_rate_pct.toFixed(2)}%`],
+                        ["Cash on Cash Return", `${rentalResult.cash_on_cash_return_pct.toFixed(2)}%`],
+                        ["IRR", rentalResult.irr_pct ? `${rentalResult.irr_pct.toFixed(2)}%` : "—"],
+                        [
+                          "Suggested Purchase Price",
+                          rentalResult.suggested_purchase_price
+                            ? formatCurrency(rentalResult.suggested_purchase_price)
+                            : "—",
+                        ],
+                      ]}
+                    />
+                  )}
+                  {flipResult && (
+                    <ResultsCard
+                      entries={[
+                        ["After Repair Value", formatCurrency(flipResult.arv)],
+                        ["Total Costs", formatCurrency(flipResult.total_costs)],
+                        ["Suggested Purchase Price", formatCurrency(flipResult.suggested_purchase_price)],
+                        ["Projected Profit", formatCurrency(flipResult.projected_profit)],
+                        ["Margin", `${flipResult.margin_pct.toFixed(2)}%`],
+                      ]}
+                    />
+                  )}
+                </div>
+              </motion.section>
+            )}
+          </AnimatePresence>
+
+          {/* Property Snapshot */}
+          {property && (
+            <motion.section
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="glass-card p-6"
+            >
+              <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                <span className="text-2xl">🏠</span> Property Snapshot
+              </h2>
+              <div className="grid sm:grid-cols-2 gap-4 mb-6">
+                {propertySummary?.map(([label, value]) => (
+                  <div key={label} className="flex justify-between items-center p-3 rounded-lg bg-surface-alt/30 border border-border/50">
+                    <span className="text-sm text-text-muted">{label}</span>
+                    <span className="font-semibold text-text">{value}</span>
+                  </div>
+                ))}
+              </div>
+
+              <details className="group">
+                <summary className="flex items-center gap-2 cursor-pointer text-sm font-medium text-primary hover:text-primary-muted transition-colors select-none">
+                  <span className="transition-transform group-open:rotate-90">▶</span>
+                  View Raw Data Payload
+                </summary>
+                <div className="mt-4 pl-4 border-l-2 border-primary/10">
+                  {rawEntries.length > 0 && (
+                    <div className="mb-4 flex flex-wrap items-center gap-3">
+                      <label htmlFor="provider-payload-select" className="text-sm font-medium text-text-muted">
+                        Source:
+                      </label>
+                      <div className="relative">
+                        <select
+                          id="provider-payload-select"
+                          value={selectedRawKey}
+                          onChange={(event) => setSelectedRawKey(event.target.value)}
+                          className="appearance-none bg-surface-alt border border-border rounded-lg py-1.5 pl-3 pr-8 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none cursor-pointer"
+                        >
+                          <option value={MERGED_PAYLOAD_KEY}>Merged Snapshot</option>
+                          {rawEntries.map((entry) => (
+                            <option key={entry.key} value={entry.key}>
+                              {entry.label}
+                            </option>
+                          ))}
+                        </select>
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-text-muted">
+                          <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" /></svg>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  <div className="rounded-lg overflow-hidden border border-border/50 shadow-inner bg-surface-alt/30">
+                    <JsonCodeBlock data={propertyRawForViewer ?? property} />
+                  </div>
+                </div>
+              </details>
+            </motion.section>
+          )}
+        </div>
+      </div>
     </main>
   );
 }
@@ -544,8 +590,7 @@ function RentalForm({ formState, setFormState, onSubmit, disabled }: RentalFormP
   }
 
   return (
-    <form onSubmit={onSubmit} style={{ display: "grid", gap: "1rem" }}>
-      <h2 style={{ marginTop: 0 }}>Rental Assumptions</h2>
+    <form onSubmit={onSubmit} className="space-y-6">
       <div className="grid-two">
         <NumberField
           label="Purchase Price ($)"
@@ -584,25 +629,25 @@ function RentalForm({ formState, setFormState, onSubmit, disabled }: RentalFormP
           step={0.5}
         />
         <NumberField
-          label="Maintenance Reserve ($)"
+          label="Maintenance ($/yr)"
           value={formState.maintenanceReserve}
           onChange={(v) => update("maintenanceReserve", v)}
           step={100}
         />
         <NumberField
-          label="CapEx Reserve ($)"
+          label="CapEx ($/yr)"
           value={formState.capexReserve}
           onChange={(v) => update("capexReserve", v)}
           step={100}
         />
         <NumberField
-          label="Insurance ($)"
+          label="Insurance ($/yr)"
           value={formState.insurance}
           onChange={(v) => update("insurance", v)}
           step={100}
         />
         <NumberField
-          label="HOA ($)"
+          label="HOA ($/yr)"
           value={formState.hoa}
           onChange={(v) => update("hoa", v)}
           step={100}
@@ -626,7 +671,7 @@ function RentalForm({ formState, setFormState, onSubmit, disabled }: RentalFormP
           step={0.5}
         />
       </div>
-      <button className="primary-button" type="submit" disabled={disabled}>
+      <button className="primary-button w-full" type="submit" disabled={disabled}>
         {disabled ? "Analyzing..." : "Run Rental Analysis"}
       </button>
     </form>
@@ -646,11 +691,10 @@ function FlipForm({ formState, setFormState, onSubmit, disabled }: FlipFormProps
   }
 
   return (
-    <form onSubmit={onSubmit} style={{ display: "grid", gap: "1rem" }}>
-      <h2 style={{ marginTop: 0 }}>Flip Assumptions</h2>
+    <form onSubmit={onSubmit} className="space-y-6">
       <div className="grid-two">
         <NumberField
-          label="Candidate Purchase Price ($)"
+          label="Candidate Price ($)"
           value={formState.candidatePrice}
           onChange={(v) => update("candidatePrice", v)}
         />
@@ -672,7 +716,7 @@ function FlipForm({ formState, setFormState, onSubmit, disabled }: FlipFormProps
           min={1}
         />
         <NumberField
-          label="Renovation Budget ($)"
+          label="Reno Budget ($)"
           value={formState.renovationBudget}
           onChange={(v) => update("renovationBudget", v)}
           step={1000}
@@ -690,13 +734,13 @@ function FlipForm({ formState, setFormState, onSubmit, disabled }: FlipFormProps
           step={0.5}
         />
         <NumberField
-          label="Closing Costs on Buy (%)"
+          label="Buying Costs (%)"
           value={formState.closingBuyPct}
           onChange={(v) => update("closingBuyPct", v)}
           step={0.1}
         />
         <NumberField
-          label="Closing Costs on Sell (%)"
+          label="Selling Costs (%)"
           value={formState.closingSellPct}
           onChange={(v) => update("closingSellPct", v)}
           step={0.1}
@@ -708,7 +752,7 @@ function FlipForm({ formState, setFormState, onSubmit, disabled }: FlipFormProps
           step={5000}
         />
       </div>
-      <button className="primary-button" type="submit" disabled={disabled}>
+      <button className="primary-button w-full" type="submit" disabled={disabled}>
         {disabled ? "Analyzing..." : "Run Flip Analysis"}
       </button>
     </form>
@@ -742,29 +786,21 @@ function NumberField({ label, value, onChange, min, max, step }: NumberFieldProp
 }
 
 interface ResultsCardProps {
-  title: string;
   entries: Array<[string, string]>;
 }
 
-function ResultsCard({ title, entries }: ResultsCardProps) {
+function ResultsCard({ entries }: ResultsCardProps) {
   return (
-    <div
-      style={{
-        border: "1px solid #e2e8f0",
-        borderRadius: 16,
-        padding: "1rem",
-        background: "#f8fafc",
-      }}
-    >
-      <h3 style={{ marginTop: 0 }}>{title}</h3>
-      <div style={{ display: "grid", gap: "0.5rem" }}>
-        {entries.map(([label, value]) => (
-          <div key={label} style={{ display: "flex", justifyContent: "space-between" }}>
-            <span>{label}</span>
-            <span style={{ fontWeight: 600 }}>{value}</span>
-          </div>
-        ))}
-      </div>
+    <div className="grid gap-3">
+      {entries.map(([label, value]) => (
+        <div
+          key={label}
+          className="flex justify-between items-center p-4 rounded-xl bg-surface-alt/50 border border-border/50 hover:border-primary/30 transition-colors"
+        >
+          <span className="text-text-muted font-medium">{label}</span>
+          <span className="text-lg font-bold text-primary">{value}</span>
+        </div>
+      ))}
     </div>
   );
 }

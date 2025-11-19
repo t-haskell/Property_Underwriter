@@ -154,9 +154,11 @@ def _rental_assumptions_from_payload(payload: RentalAssumptionsPayload) -> Renta
         hoa_annual=payload.hoa_annual,
         property_mgmt_pct=payload.property_mgmt_pct,
         hold_period_years=payload.hold_period_years,
+        closing_costs_pct=payload.closing_costs_pct,
         target_cap_rate_pct=payload.target_cap_rate_pct,
         target_irr_pct=payload.target_irr_pct,
     )
+
 
 
 def _flip_assumptions_from_payload(payload: FlipAssumptionsPayload) -> FlipAssumptions:
@@ -273,6 +275,7 @@ def rental_analysis(
         annual_debt_service=result.annual_debt_service,
         cash_flow_annual=result.cash_flow_annual,
         cap_rate_pct=result.cap_rate_pct,
+        cash_on_cash_return_pct=result.cash_on_cash_return_pct,
         irr_pct=result.irr_pct,
         suggested_purchase_price=result.suggested_purchase_price,
     )

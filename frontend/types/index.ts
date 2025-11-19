@@ -43,8 +43,9 @@ export interface RentalAssumptions {
   hoa_annual: number;
   property_mgmt_pct: number;
   hold_period_years: number;
-  target_cap_rate_pct?: number | null;
-  target_irr_pct?: number | null;
+  closing_costs_pct?: number;
+  target_cap_rate_pct?: number;
+  target_irr_pct?: number;
 }
 
 export interface FlipAssumptions {

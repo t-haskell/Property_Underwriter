@@ -52,6 +52,7 @@ class RentalAssumptionsPayload(BaseModel):
     hoa_annual: float
     property_mgmt_pct: float
     hold_period_years: int
+    closing_costs_pct: float = 3.0
     target_cap_rate_pct: Optional[float] = None
     target_irr_pct: Optional[float] = None
 
@@ -67,6 +68,7 @@ class RentalAnalysisResponse(BaseModel):
     annual_debt_service: float
     cash_flow_annual: float
     cap_rate_pct: float
+    cash_on_cash_return_pct: float
     irr_pct: Optional[float]
     suggested_purchase_price: Optional[float]
 
