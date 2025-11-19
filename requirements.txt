@@ -12,3 +12,4 @@ fastapi
 uvicorn
 streamlit
 SQLAlchemy>=2.0
+openai
