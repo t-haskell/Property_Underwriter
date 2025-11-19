@@ -65,6 +65,7 @@ export interface RentalResult {
   annual_debt_service: number;
   cash_flow_annual: number;
   cap_rate_pct: number;
+  cash_on_cash_return_pct: number;
   irr_pct?: number | null;
   suggested_purchase_price?: number | null;
 }

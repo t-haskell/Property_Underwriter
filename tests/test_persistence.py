@@ -75,6 +75,7 @@ def test_property_repository_round_trip(tmp_path):
         annual_debt_service=12000.0,
         cash_flow_annual=6000.0,
         cap_rate_pct=5.1423,
+        cash_on_cash_return_pct=9.75,
         irr_pct=11.5,
         suggested_purchase_price=320000.0,
     )
