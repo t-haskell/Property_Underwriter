@@ -7,7 +7,6 @@ frontend/.next/
 frontend/out/
 src/utils/__pycache__/*
 underwriter.log
-frontend/.eslintrc.json
 src/utils/__pycache__/logging.cpython-312.pyc
 
 frontend/out/
