@@ -2,6 +2,8 @@
 
 Property Underwriter is a two-tier application that helps real-estate investors analyze rental and flip opportunities. The backend exposes a REST API powered by FastAPI and SQLite persistence, while the frontend delivers an interactive underwriting experience with Next.js, TailwindCSS, and rich visual components. A legacy Streamlit UI is still available for rapid prototyping.
 
+https://t-haskell.github.io/Property_Underwriter/
+
 ## Features
 
 - **Rental analysis** – Computes NOI, debt service, cap rate, IRR, and suggested purchase price using configurable assumptions.
