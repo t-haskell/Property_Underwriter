@@ -1,0 +1,89 @@
+Non-Commercial Software License
+with Designated Commercial Exception
+
+Copyright (c) 2025 Tommy Haskell
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to use,
+copy, modify, and distribute the Software for personal, academic, or other
+non-commercial purposes only, subject to the terms and conditions set forth
+below.
+
+1. Definitions.
+
+   (a) "Non-Commercial Purposes" means any use that is not intended for or
+       directed toward commercial advantage, monetary compensation, or other
+       revenue-generating activity, whether direct or indirect.
+
+   (b) "Commercial Use" means any use of the Software, in whole or in part,
+       in a manner intended for or directed toward commercial advantage,
+       monetary compensation, or other revenue-generating activity, whether
+       direct or indirect. This includes, without limitation, use of the
+       Software in or as part of any product or service that is sold, offered
+       for a fee, licensed for consideration, or used to provide services to
+       third parties for consideration.
+
+   (c) "Haskell Capital LLC" means the entity organized as Haskell Capital
+       LLC under applicable law, together with its successors and assigns.
+
+2. Grant of Rights for Non-Commercial Purposes (General Public).
+
+   Subject to the terms and conditions of this License, any person obtaining
+   a copy of the Software is hereby granted a worldwide, non-exclusive,
+   non-transferable, royalty-free license to use, copy, modify, and
+   distribute the Software, in source or binary form, for Non-Commercial
+   Purposes only.
+
+3. Commercial Use Prohibited (General Public).
+
+   Except as expressly provided in Section 4, no right is granted under this
+   License to use, copy, modify, or distribute the Software, in whole or in
+   part, for Commercial Use. Any Commercial Use of the Software, except as
+   permitted under Section 4, requires the prior written permission of the
+   copyright holder.
+
+4. Commercial Use Exception for Haskell Capital LLC.
+
+   Notwithstanding Section 3, Haskell Capital LLC is hereby granted a
+   perpetual, worldwide, non-exclusive, transferable, sublicensable,
+   royalty-free license to use, copy, modify, and distribute the Software,
+   including for Commercial Use, as part of its internal tools, products,
+   services provided to clients, and any related business activities.
+
+5. Attribution.
+
+   The above copyright notice and this License notice shall be included in
+   all copies or substantial portions of the Software, whether used,
+   copied, modified, or distributed, in source or binary form.
+
+6. No Trademark Rights.
+
+   This License does not grant permission to use the trade names, trademarks,
+   service marks, or product names of the copyright holder, except as
+   required for reasonable and customary use in describing the origin of the
+   Software.
+
+7. No Warranty.
+
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+   FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+   DEALINGS IN THE SOFTWARE.
+
+8. Termination.
+
+   This License shall automatically terminate, and all rights granted herein
+   shall immediately cease, if you materially breach any of its terms. Upon
+   termination, you must cease all use of the Software and destroy all copies
+   in your possession or control; however, Sections 5, 6, and 7 shall survive
+   such termination.
+
+9. Severability.
+
+   If any provision of this License is held to be unenforceable, such
+   provision shall be reformed only to the extent necessary to make it
+   enforceable, and the remaining provisions shall remain in full force
+   and effect.
