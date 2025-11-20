@@ -63,6 +63,7 @@ Property_Underwriter/
 | Variable | Description | Default |
 | --- | --- | --- |
 | `DATABASE_URL` | SQLAlchemy database URL for persistence | `sqlite:///property_underwriter.db` |
+| `API_ALLOWED_ORIGINS` | Comma-separated list of origins permitted by CORS middleware | development + hosted defaults |
 | `CACHE_TTL_MIN` | Minutes to cache provider responses | `60` |
 | `PROVIDER_TIMEOUT_SEC` | Timeout (seconds) for provider HTTP calls | `10` |
 | `USE_MOCK_PROVIDER_IF_NO_KEYS` | Fallback to deterministic mock data when providers are unconfigured | `true` |
