@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Dict, List, Optional
 
-from ...core.models import Address, ApiSource, PropertyData, SourceAttribution
+from ...core.models import ApiSource, PropertyData, SourceAttribution
 
 
 @dataclass(slots=True)

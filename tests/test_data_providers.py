@@ -2,7 +2,6 @@ import json
 import time
 
 import httpx
-import pytest
 
 from src.core.models import Address, ApiSource
 from src.services.data_providers import (

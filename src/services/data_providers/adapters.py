@@ -37,5 +37,9 @@ class LegacyProviderAdapter(BaseDataProvider):
         return ProviderResult(
             metadata=ProviderMetadata(provider_name=self.name),
             property_data=patch,
-            raw_payload=result.meta.get(patch.raw_reference) if result.meta else None,
+            raw_payload=(
+                result.meta.get(patch.raw_reference)
+                if result.meta and patch.raw_reference
+                else None
+            ),
         )

@@ -88,10 +88,12 @@ class HudFmrProvider(BaseDataProvider):
             return []
 
         year = None
-        try:
-            year = int(payload.get("year")) if payload.get("year") else None
-        except (TypeError, ValueError):
-            year = None
+        raw_year = payload.get("year")
+        if isinstance(raw_year, (int, float, str)):
+            try:
+                year = int(raw_year)
+            except (TypeError, ValueError):
+                year = None
 
         benchmarks: list[AreaRentBenchmark] = []
         for bedroom_key, amount in fmr.items():

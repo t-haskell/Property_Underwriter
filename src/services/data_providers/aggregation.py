@@ -31,7 +31,7 @@ class DataAggregationService:
         self.open_data_providers = list(open_data_providers)
         self.marketplace_provider = marketplace_provider
 
-    def aggregate(self, address: Address, *, existing: Optional[PropertyData] = None) -> Optional[PropertyData]:
+    def aggregate(self, address: Address, *, existing: Optional[PropertyData] = None) -> PropertyData:
         aggregated = existing or PropertyData(address=address, meta={}, sources=[], provenance=[])
 
         for provider in self.primary_adapters:
