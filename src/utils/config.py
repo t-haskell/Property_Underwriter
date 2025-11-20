@@ -27,6 +27,25 @@ class EstatedConfig:
     base_url: str
     timeout: int
 
+
+@dataclass(slots=True)
+class HudConfig:
+    api_key: str | None
+    base_url: str
+    timeout: int
+    cache_ttl_min: int
+
+
+@dataclass(slots=True)
+class MarketplaceConfig:
+    enabled: bool
+    api_key: str | None
+    base_url: str
+    timeout: int
+    max_results: int
+    max_retries: int
+    backoff_seconds: float
+
 @dataclass(slots=True)
 class RentcastConfig:
     api_key: str | None
@@ -70,6 +89,18 @@ class Settings(BaseSettings):
     REDFIN_API_KEY: str | None = None
     REDFIN_BASE_URL: str = "https://redfin-working-api1.p.rapidapi.com"
     REDFIN_RAPIDAPI_HOST: str = "redfin-working-api1.p.rapidapi.com"
+
+    HUD_FMR_API_KEY: str | None = None
+    HUD_FMR_BASE_URL: str = "https://www.huduser.gov/hudapi/public/fmr"
+    HUD_FMR_CACHE_TTL_MIN: int = 720
+
+    ENABLE_MARKETPLACE_SCRAPING: bool = False
+    MARKETPLACE_SCRAPING_BASE_URL: str = ""
+    MARKETPLACE_SCRAPING_API_KEY: str | None = None
+    MARKETPLACE_SCRAPING_TIMEOUT_SEC: int = 10
+    MARKETPLACE_SCRAPING_MAX_RESULTS: int = 15
+    MARKETPLACE_SCRAPING_MAX_RETRIES: int = 2
+    MARKETPLACE_SCRAPING_BACKOFF_SEC: float = 0.75
 
     DATABASE_URL: str = "sqlite:///property_underwriter.db"
     # DATABASE_URL: str = "sqlite:///./property_underwriter.db"
@@ -128,6 +159,27 @@ class Settings(BaseSettings):
             api_key=self.ESTATED_API_KEY,
             base_url=self.ESTATED_BASE_URL,
             timeout=self.PROVIDER_TIMEOUT_SEC,
+        )
+
+    @property
+    def hud(self) -> HudConfig:
+        return HudConfig(
+            api_key=self.HUD_FMR_API_KEY,
+            base_url=self.HUD_FMR_BASE_URL,
+            timeout=self.PROVIDER_TIMEOUT_SEC,
+            cache_ttl_min=self.HUD_FMR_CACHE_TTL_MIN,
+        )
+
+    @property
+    def marketplace(self) -> MarketplaceConfig:
+        return MarketplaceConfig(
+            enabled=self.ENABLE_MARKETPLACE_SCRAPING,
+            api_key=self.MARKETPLACE_SCRAPING_API_KEY,
+            base_url=self.MARKETPLACE_SCRAPING_BASE_URL,
+            timeout=self.MARKETPLACE_SCRAPING_TIMEOUT_SEC,
+            max_results=self.MARKETPLACE_SCRAPING_MAX_RESULTS,
+            max_retries=self.MARKETPLACE_SCRAPING_MAX_RETRIES,
+            backoff_seconds=self.MARKETPLACE_SCRAPING_BACKOFF_SEC,
         )
 
 
