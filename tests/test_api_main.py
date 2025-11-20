@@ -251,6 +251,7 @@ def _rental_result() -> RentalResult:
         annual_debt_service=12000.0,
         cash_flow_annual=6000.0,
         cap_rate_pct=6.0,
+        cash_on_cash_return_pct=10.5,
         irr_pct=11.5,
         suggested_purchase_price=310000.0,
     )
@@ -281,6 +282,7 @@ def test_rental_analysis_success(monkeypatch: pytest.MonkeyPatch, client: TestCl
         "annual_debt_service": 12000.0,
         "cash_flow_annual": 6000.0,
         "cap_rate_pct": 6.0,
+        "cash_on_cash_return_pct": 10.5,
         "irr_pct": 11.5,
         "suggested_purchase_price": 310000.0,
     }

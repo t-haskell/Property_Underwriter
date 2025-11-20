@@ -11,15 +11,13 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, List, Mapping, Optional, Protocol, Sequence, Tuple, Union, cast
+from typing import Any, List, Mapping, Optional, Protocol, Sequence, Tuple, Union, cast
 
 try:  # pragma: no cover - exercised when dependency is available
     import openai
 except ImportError:  # pragma: no cover - allows tests without installing openai
     openai = cast(Any, None)
 
-if TYPE_CHECKING:  # pragma: no cover - import only used for static type checking
-    from openai import OpenAI as OpenAIClient
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.core.models import Address, PropertyData
