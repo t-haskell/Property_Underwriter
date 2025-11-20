@@ -10,7 +10,6 @@ underwriter.log
 src/utils/__pycache__/logging.cpython-312.pyc
 
 frontend/out/
-*__init__*
 __pycache__/
 *.pyc
 src/utils/__pycache__/*

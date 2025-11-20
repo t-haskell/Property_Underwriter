@@ -8,7 +8,14 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Dict, Iterable, Iterator, List, Optional
 
-from ..core.models import Address, ApiSource, FlipResult, PropertyData, RentalResult
+from ..core.models import (
+    Address,
+    ApiSource,
+    FlipResult,
+    PropertyData,
+    RentalResult,
+    SourceAttribution,
+)
 from ..utils.config import settings
 from ..utils.logging import logger
 
@@ -223,7 +230,12 @@ class PropertyRepository:
         normalized = _normalize_address(data.address)
         with _connection() as conn:
             record = self._get_record(conn, normalized)
-            merged_meta = self._merge_meta(record, data.meta)
+            provenance_meta = (
+                {"provenance": [item.model_dump(mode="json") for item in data.provenance]}
+                if data.provenance
+                else {}
+            )
+            merged_meta = self._merge_meta(record, {**data.meta, **provenance_meta})
             payload = self._property_payload(normalized, data, merged_meta)
 
             if record is None:
@@ -273,7 +285,12 @@ class PropertyRepository:
 
         with _connection() as conn:
             record = self._get_record(conn, normalized)
-            merged_meta = self._merge_meta(record, property_data.meta)
+            provenance_meta = (
+                {"provenance": [item.model_dump(mode="json") for item in property_data.provenance]}
+                if property_data.provenance
+                else {}
+            )
+            merged_meta = self._merge_meta(record, {**property_data.meta, **provenance_meta})
             payload = self._property_payload(normalized, property_data, merged_meta)
 
             if record is None:
@@ -405,6 +422,11 @@ class PropertyRepository:
                     "Ignoring unknown source '%s' while hydrating property", source_row["source"]
                 )
 
+        meta_payload = _deserialise_json(record["meta"])
+        provenance = self._extract_provenance(meta_payload)
+        if isinstance(meta_payload, dict):
+            meta_payload.pop("provenance", None)
+
         return PropertyData(
             address=Address(
                 line1=record["line1"],
@@ -421,8 +443,9 @@ class PropertyRepository:
             rent_estimate=record["rent_estimate"],
             annual_taxes=record["annual_taxes"],
             closing_cost_estimate=record["closing_cost_estimate"],
-            meta=_deserialise_json(record["meta"]),
+            meta=meta_payload if isinstance(meta_payload, dict) else {},
             sources=api_sources,
+            provenance=provenance,
         )
 
     def _property_payload(
@@ -451,8 +474,59 @@ class PropertyRepository:
     def _merge_meta(self, record: sqlite3.Row | None, new_meta: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         existing = _deserialise_json(record["meta"]) if record is not None else {}
         incoming = dict(new_meta or {})
-        existing.update({key: value for key, value in incoming.items() if value is not None})
-        return existing
+
+        existing_provenance = existing.get("provenance", []) if isinstance(existing, dict) else []
+        incoming_provenance = incoming.get("provenance", []) if isinstance(incoming, dict) else []
+
+        def _merge_provenance(
+            current: List[Dict[str, Any]],
+            new: List[Dict[str, Any]],
+        ) -> List[Dict[str, Any]]:
+            combined = current + new
+            deduped: List[Dict[str, Any]] = []
+            seen = set()
+            for item in combined:
+                key = (
+                    item.get("provider"),
+                    tuple(item.get("fields", [])),
+                    item.get("fetched_at"),
+                )
+                if key in seen:
+                    continue
+                seen.add(key)
+                deduped.append(item)
+            return deduped
+
+        merged = {key: value for key, value in existing.items() if key != "provenance"}
+        merged.update({key: value for key, value in incoming.items() if key != "provenance" and value is not None})
+
+        provenance_merged = _merge_provenance(
+            existing_provenance if isinstance(existing_provenance, list) else [],
+            incoming_provenance if isinstance(incoming_provenance, list) else [],
+        )
+        if provenance_merged:
+            merged["provenance"] = provenance_merged
+
+        return merged
+
+    def _extract_provenance(self, raw_meta: str | Dict[str, Any] | None) -> List[SourceAttribution]:
+        if isinstance(raw_meta, str):
+            meta = _deserialise_json(raw_meta)
+        else:
+            meta = raw_meta or {}
+
+        provenance_payload = meta.get("provenance") if isinstance(meta, dict) else []
+        results: List[SourceAttribution] = []
+        if not isinstance(provenance_payload, list):
+            return results
+        for entry in provenance_payload:
+            if not isinstance(entry, dict):
+                continue
+            try:
+                results.append(SourceAttribution(**entry))
+            except ValueError:
+                continue
+        return results
 
     def _replace_sources(self, conn: sqlite3.Connection, property_id: int, sources: Iterable[ApiSource]) -> None:
         unique_sources = sorted({source.value for source in sources})

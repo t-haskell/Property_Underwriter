@@ -5,6 +5,11 @@ from typing import List, Optional
 from ..core.models import Address, PropertyData
 from ..utils.config import settings
 from ..utils.logging import logger
+from .data_providers import (
+    DataAggregationService,
+    HudFmrProvider,
+    MarketplaceCompsProvider,
+)
 from .providers.attom import AttomProvider
 from .providers.base import PropertyDataProvider
 from .providers.closingcorp import ClosingcorpProvider
@@ -120,6 +125,41 @@ def _configured_providers() -> List[PropertyDataProvider]:
 
     return providers
 
+
+def _build_aggregation_service(
+    providers: List[PropertyDataProvider],
+) -> DataAggregationService:
+    hud_config = settings.hud
+    open_data_providers = []
+    if hud_config.base_url:
+        open_data_providers.append(
+            HudFmrProvider(
+                base_url=hud_config.base_url,
+                api_key=hud_config.api_key,
+                timeout=hud_config.timeout,
+                cache_ttl_min=hud_config.cache_ttl_min,
+            )
+        )
+
+    marketplace_config = settings.marketplace
+    marketplace_provider = None
+    if marketplace_config.enabled:
+        marketplace_provider = MarketplaceCompsProvider(
+            base_url=marketplace_config.base_url,
+            api_key=marketplace_config.api_key,
+            enabled=marketplace_config.enabled,
+            timeout=marketplace_config.timeout,
+            max_results=marketplace_config.max_results,
+            max_retries=marketplace_config.max_retries,
+            backoff_seconds=marketplace_config.backoff_seconds,
+        )
+
+    return DataAggregationService(
+        primary_providers=providers,
+        open_data_providers=open_data_providers,
+        marketplace_provider=marketplace_provider,
+    )
+
 def normalize_address(address: Address) -> Address:
     return Address(
         line1=address.line1.strip().upper(),
@@ -158,8 +198,8 @@ def fetch_property(
         )
 
     address = normalized_address
-
-    if not providers:
+    aggregation_service = _build_aggregation_service(providers)
+    if not providers and not aggregation_service.open_data_providers and not aggregation_service.marketplace_provider:
         if cached:
             logger.info(
                 "No providers configured; returning cached property data for %s",
@@ -175,28 +215,30 @@ def fetch_property(
         logger.warning("No property data providers configured; returning None.")
         return None
 
-    merged: Optional[PropertyData] = None
-    for provider in providers:
-        try:
-            data = provider.fetch(address)
-            logger.info(f"Data fetched with {provider}: {data}")
-        except Exception as exc:
-            logger.exception("Provider %s failed: %s", provider.__class__.__name__, exc)
-            continue
+    aggregated = aggregation_service.aggregate(address, existing=cached)
 
-        if not data:
-            logger.info("Provider %s returned no data for %s", provider.__class__.__name__, address)
-            continue
+    has_payload = any(
+        getattr(aggregated, field) is not None
+        for field in (
+            "beds",
+            "baths",
+            "sqft",
+            "lot_sqft",
+            "year_built",
+            "market_value_estimate",
+            "rent_estimate",
+            "annual_taxes",
+            "closing_cost_estimate",
+        )
+    ) or bool(aggregated.meta)
 
-        merged = data if merged is None else merge(merged, data)
-
-    if merged:
-        repository.upsert_property(merged)
-        return merged
+    if aggregated and has_payload:
+        repository.upsert_property(aggregated)
+        return aggregated
 
     if cached:
         logger.info(
-            "Providers returned no data for %s; falling back to cached property snapshot",
+            "Providers returned no new data for %s; falling back to cached property snapshot",
             address,
         )
         return cached

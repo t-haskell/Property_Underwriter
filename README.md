@@ -72,6 +72,8 @@ Property_Underwriter/
 | `ESTATED_API_KEY`, `ESTATED_BASE_URL` | Estated property API credentials | see `.env.example` |
 | `RENTCAST_API_KEY`, `RENTCAST_BASE_URL` | RentCast rental data credentials | see `.env.example` |
 | `REDFIN_API_KEY`, `REDFIN_BASE_URL`, `REDFIN_RAPIDAPI_HOST` | RapidAPI-backed Redfin client settings | see `.env.example` |
+| `HUD_FMR_API_KEY`, `HUD_FMR_BASE_URL`, `HUD_FMR_CACHE_TTL_MIN` | HUD/open-data rent benchmark settings | `HUD_FMR_BASE_URL` defaults to HUD public FMR endpoint |
+| `ENABLE_MARKETPLACE_SCRAPING`, `MARKETPLACE_SCRAPING_BASE_URL`, `MARKETPLACE_SCRAPING_API_KEY`, `MARKETPLACE_SCRAPING_TIMEOUT_SEC`, `MARKETPLACE_SCRAPING_MAX_RESULTS`, `MARKETPLACE_SCRAPING_MAX_RETRIES`, `MARKETPLACE_SCRAPING_BACKOFF_SEC` | Optional third-party scraping API integration for marketplace comps | `ENABLE_MARKETPLACE_SCRAPING=false` |
 | `ATTOM_API_KEY`, `ATTOM_BASE_URL` | ATTOM property API credentials | see `.env.example` |
 | `CLOSINGCORP_API_KEY`, `CLOSINGCORP_BASE_URL` | Closing cost data source credentials | see `.env.example` |
 
@@ -136,6 +138,9 @@ mypy src tests
 
 # Unit tests with coverage
 pytest --cov=src --cov-report=xml --cov-fail-under=45
+
+# Data provider unit tests (mocked HTTP)
+pytest tests/test_data_providers.py
 ```
 
 ### Frontend

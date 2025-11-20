@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from decimal import Decimal
+from datetime import datetime
 from enum import Enum
 from typing import Dict, List, Optional, Union
 
@@ -120,6 +121,8 @@ class ApiSource(str, Enum):
     RENTCAST = "rentcast"
     REDFIN = "redfin"
     MOCK = "mock"
+    HUD = "hud_fmr"
+    MARKETPLACE = "marketplace_comps"
 
 
 class Address(DomainModel):
@@ -154,6 +157,7 @@ class PropertyData(DomainModel):
     closing_cost_estimate: Optional[float] = None
     meta: Dict[str, str] = Field(default_factory=dict)
     sources: List[ApiSource] = Field(default_factory=list)
+    provenance: List["SourceAttribution"] = Field(default_factory=list)
 
     @field_validator("beds", "baths", mode="before")
     @classmethod
@@ -180,6 +184,29 @@ class PropertyData(DomainModel):
             allow_none=True,
             decimals=2,
         )
+
+
+class SourceAttribution(DomainModel):
+    provider: str
+    fields: List[str] = Field(default_factory=list)
+    fetched_at: datetime
+    request_id: Optional[str] = None
+    raw_reference: Optional[str] = None
+
+    @field_validator("provider")
+    @classmethod
+    def _validate_provider(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("provider cannot be blank")
+        return value
+
+    @field_validator("fields")
+    @classmethod
+    def _validate_fields(cls, value: List[str]) -> List[str]:
+        cleaned = [item for item in value if item]
+        if not cleaned:
+            raise ValueError("fields cannot be empty")
+        return cleaned
 
 
 class RentalAssumptions(DomainModel):
