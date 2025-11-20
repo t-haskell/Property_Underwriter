@@ -50,6 +50,19 @@ const flipDefaults = {
 };
 
 type AnalysisType = "rental" | "flip";
+type TabId = "overview" | "acquisition" | "financing" | "returns" | "data";
+
+interface FinancingSnapshot {
+  purchasePrice: number;
+  downPaymentPct: number;
+  interestRatePct: number;
+  loanTermYears: number;
+  loanAmount: number;
+  monthlyDebtService: number;
+  annualDebtService: number;
+  ltv: number | null;
+  dscr: number | null;
+}
 
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -74,6 +87,7 @@ export default function Home() {
   const [isFetchingProperty, setIsFetchingProperty] = useState(false);
   const [isRunningAnalysis, setIsRunningAnalysis] = useState(false);
   const [selectedRawKey, setSelectedRawKey] = useState<string>(MERGED_PAYLOAD_KEY);
+  const [activeTab, setActiveTab] = useState<TabId>("overview");
 
   const propertyIdentity = useMemo(() => {
     if (!property) {
@@ -173,6 +187,11 @@ export default function Home() {
   }, [propertyIdentity]);
 
   useEffect(() => {
+    // Reset the active tab when a new property loads to guide users through the flow.
+    setActiveTab("overview");
+  }, [propertyIdentity]);
+
+  useEffect(() => {
     setSelectedRawKey((current) => {
       if (!property || rawEntries.length === 0) {
         return MERGED_PAYLOAD_KEY;
@@ -199,6 +218,36 @@ export default function Home() {
     const match = rawEntries.find((entry) => entry.key === selectedRawKey);
     return match?.value ?? property;
   }, [property, rawEntries, selectedRawKey]);
+
+  const financingSnapshot = useMemo<FinancingSnapshot>(() => {
+    const purchasePrice = analysisType === "rental" ? rentalForm.purchasePrice : flipForm.candidatePrice;
+    const downPaymentPct = analysisType === "rental" ? rentalForm.downPaymentPct : flipForm.downPaymentPct;
+    const interestRatePct = analysisType === "rental" ? rentalForm.interestRatePct : flipForm.interestRatePct;
+    const loanTermYears = analysisType === "rental" ? rentalForm.loanTermYears : flipForm.loanTermYears;
+
+    const loanAmount = Math.max(purchasePrice * (1 - downPaymentPct / 100), 0);
+    const monthlyRate = interestRatePct > 0 ? interestRatePct / 100 / 12 : 0;
+    const totalPayments = Math.max(loanTermYears * 12, 1);
+    const monthlyDebtService =
+      monthlyRate === 0
+        ? loanAmount / totalPayments
+        : (loanAmount * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -totalPayments));
+    const annualDebtService = monthlyDebtService * 12;
+    const ltv = purchasePrice > 0 ? (loanAmount / purchasePrice) * 100 : null;
+    const dscr = rentalResult?.noi_annual && annualDebtService > 0 ? rentalResult.noi_annual / annualDebtService : null;
+
+    return {
+      purchasePrice,
+      downPaymentPct,
+      interestRatePct,
+      loanTermYears,
+      loanAmount,
+      monthlyDebtService,
+      annualDebtService,
+      ltv,
+      dscr,
+    };
+  }, [analysisType, flipForm, rentalForm, rentalResult]);
 
   async function handleRentalSubmit(event: FormEvent) {
     event.preventDefault();
@@ -281,10 +330,10 @@ export default function Home() {
         className="mb-10 text-center"
       >
         <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight mb-4 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-          Property Underwriter
+          Portfolio Deal Review
         </h1>
         <p className="text-lg text-text-muted max-w-2xl mx-auto">
-          Professional-grade real estate analysis powered by multi-source data aggregation.
+          Evaluate a potential rental or flip with clear numbers and friendly guidance—no underwriting jargon required.
         </p>
       </motion.header>
 
@@ -378,7 +427,7 @@ export default function Home() {
             className="glass-card p-6"
           >
             <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-              <span className="text-2xl">📊</span> Analysis Strategy
+              <span className="text-2xl">📊</span> Investment Path
             </h2>
             <div className="flex p-1 bg-surface-alt/50 rounded-xl border border-border/50 relative">
               <div className="absolute inset-1 bg-white rounded-lg shadow-sm transition-all duration-300"
@@ -468,112 +517,382 @@ export default function Home() {
             )}
           </AnimatePresence>
 
-          {/* Results Section */}
-          <AnimatePresence>
-            {(rentalResult || flipResult) && (
-              <motion.section
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="glass-card p-8 border-primary/20 ring-1 ring-primary/10"
-              >
-                <h2 className="text-2xl font-bold mb-6 flex items-center gap-2 text-primary">
-                  <span className="text-3xl">📈</span> Analysis Results
+          <motion.section
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="glass-card p-6"
+          >
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-xl font-semibold flex items-center gap-2">
+                  <span className="text-2xl">🧭</span> Deal Review Workspace
                 </h2>
-                <div className="grid gap-4">
-                  {rentalResult && (
-                    <ResultsCard
-                      entries={[
-                        ["Net Operating Income", formatCurrency(rentalResult.noi_annual)],
-                        ["Annual Debt Service", formatCurrency(rentalResult.annual_debt_service)],
-                        ["Annual Cash Flow", formatCurrency(rentalResult.cash_flow_annual)],
-                        ["Cap Rate", `${rentalResult.cap_rate_pct.toFixed(2)}%`],
-                        ["Cash on Cash Return", `${rentalResult.cash_on_cash_return_pct.toFixed(2)}%`],
-                        ["IRR", rentalResult.irr_pct ? `${rentalResult.irr_pct.toFixed(2)}%` : "—"],
-                        [
-                          "Suggested Purchase Price",
-                          rentalResult.suggested_purchase_price
-                            ? formatCurrency(rentalResult.suggested_purchase_price)
-                            : "—",
-                        ],
-                      ]}
-                    />
-                  )}
-                  {flipResult && (
-                    <ResultsCard
-                      entries={[
-                        ["After Repair Value", formatCurrency(flipResult.arv)],
-                        ["Total Costs", formatCurrency(flipResult.total_costs)],
-                        ["Suggested Purchase Price", formatCurrency(flipResult.suggested_purchase_price)],
-                        ["Projected Profit", formatCurrency(flipResult.projected_profit)],
-                        ["Margin", `${flipResult.margin_pct.toFixed(2)}%`],
-                      ]}
-                    />
-                  )}
-                </div>
-              </motion.section>
-            )}
-          </AnimatePresence>
-
-          {/* Property Snapshot */}
-          {property && (
-            <motion.section
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="glass-card p-6"
-            >
-              <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                <span className="text-2xl">🏠</span> Property Snapshot
-              </h2>
-              <div className="grid sm:grid-cols-2 gap-4 mb-6">
-                {propertySummary?.map(([label, value]) => (
-                  <div key={label} className="flex justify-between items-center p-3 rounded-lg bg-surface-alt/30 border border-border/50">
-                    <span className="text-sm text-text-muted">{label}</span>
-                    <span className="font-semibold text-text">{value}</span>
-                  </div>
+                <p className="text-sm text-text-muted">
+                  Switch between tabs to see purchase guidance, financing, and outcomes tailored to your chosen rental or flip path.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { id: "overview", label: "Overview" },
+                  { id: "acquisition", label: "Acquisition" },
+                  { id: "financing", label: "Financing" },
+                  { id: "returns", label: "Cashflow & Returns" },
+                  { id: "data", label: "Data Room" },
+                ].map((tab) => (
+                  <TabButton key={tab.id} label={tab.label} active={activeTab === tab.id} onClick={() => setActiveTab(tab.id as TabId)} />
                 ))}
               </div>
+            </div>
 
-              <details className="group">
-                <summary className="flex items-center gap-2 cursor-pointer text-sm font-medium text-primary hover:text-primary-muted transition-colors select-none">
-                  <span className="transition-transform group-open:rotate-90">▶</span>
-                  View Raw Data Payload
-                </summary>
-                <div className="mt-4 pl-4 border-l-2 border-primary/10">
-                  {rawEntries.length > 0 && (
-                    <div className="mb-4 flex flex-wrap items-center gap-3">
-                      <label htmlFor="provider-payload-select" className="text-sm font-medium text-text-muted">
-                        Source:
-                      </label>
-                      <div className="relative">
-                        <select
-                          id="provider-payload-select"
-                          value={selectedRawKey}
-                          onChange={(event) => setSelectedRawKey(event.target.value)}
-                          className="appearance-none bg-surface-alt border border-border rounded-lg py-1.5 pl-3 pr-8 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none cursor-pointer"
-                        >
-                          <option value={MERGED_PAYLOAD_KEY}>Merged Snapshot</option>
-                          {rawEntries.map((entry) => (
-                            <option key={entry.key} value={entry.key}>
-                              {entry.label}
-                            </option>
-                          ))}
-                        </select>
-                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-text-muted">
-                          <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" /></svg>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  <div className="rounded-lg overflow-hidden border border-border/50 shadow-inner bg-surface-alt/30">
-                    <JsonCodeBlock data={propertyRawForViewer ?? property} />
-                  </div>
+            <div className="mt-6">
+              {property ? (
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={activeTab}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.2 }}
+                    className="space-y-4"
+                  >
+                    {activeTab === "overview" && (
+                      <OverviewTab
+                        property={property}
+                        propertySummary={propertySummary}
+                        analysisType={analysisType}
+                        rentalResult={rentalResult}
+                      />
+                    )}
+                    {activeTab === "acquisition" && (
+                      <AcquisitionTab
+                        property={property}
+                        purchasePrice={financingSnapshot.purchasePrice}
+                        analysisType={analysisType}
+                        rentalResult={rentalResult}
+                        flipResult={flipResult}
+                      />
+                    )}
+                    {activeTab === "financing" && (
+                      <FinancingTab
+                        financingSnapshot={financingSnapshot}
+                        rentalResult={rentalResult}
+                        analysisType={analysisType}
+                      />
+                    )}
+                    {activeTab === "returns" && (
+                      <ReturnsTab
+                        analysisType={analysisType}
+                        rentalResult={rentalResult}
+                        flipResult={flipResult}
+                      />
+                    )}
+                    {activeTab === "data" && (
+                      <DataRoomTab
+                        property={property}
+                        rawEntries={rawEntries}
+                        selectedRawKey={selectedRawKey}
+                        onSelectRawKey={setSelectedRawKey}
+                        propertyRawForViewer={propertyRawForViewer ?? property}
+                      />
+                    )}
+                  </motion.div>
+                </AnimatePresence>
+              ) : (
+                <div className="rounded-xl border border-dashed border-border bg-surface-alt/30 p-6 text-center text-text-muted">
+                  <p className="font-semibold text-text">Load an address to open the deal review.</p>
+                  <p className="text-sm">Start by entering a property and fetching data on the left.</p>
                 </div>
-              </details>
-            </motion.section>
-          )}
+              )}
+            </div>
+          </motion.section>
         </div>
       </div>
     </main>
+  );
+}
+
+interface TabButtonProps {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}
+
+function TabButton({ label, active, onClick }: TabButtonProps) {
+  return (
+    <button
+      type="button"
+      className={`chip ${active ? "chip-active" : ""}`}
+      onClick={onClick}
+    >
+      {label}
+    </button>
+  );
+}
+
+interface OverviewTabProps {
+  property: PropertyData;
+  propertySummary: Array<[string, string | number]> | null;
+  analysisType: AnalysisType;
+  rentalResult: RentalResult | null;
+}
+
+function OverviewTab({ property, propertySummary, analysisType, rentalResult }: OverviewTabProps) {
+  return (
+    <div className="space-y-4">
+      <div className="grid sm:grid-cols-2 gap-4">
+        {propertySummary?.map(([label, value]) => (
+          <MetricRow key={label} label={label} value={`${value}`} />
+        ))}
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {property.sources?.length ? (
+          property.sources.map((source) => (
+            <span key={source} className="chip chip-active">
+              {source}
+            </span>
+          ))
+        ) : (
+          <span className="text-sm text-text-muted">Sources will appear after fetching provider data.</span>
+        )}
+      </div>
+      <div className="rounded-xl bg-surface-alt/40 border border-border/60 p-4">
+        <p className="text-sm text-text-muted mb-1">Current strategy</p>
+        <p className="font-semibold text-text">{analysisType === "rental" ? "Long-term rental" : "Fix & flip"}</p>
+        <p className="text-sm text-text-muted mt-1">Toggle the path above to see how the numbers change for your portfolio.</p>
+        {rentalResult && (
+          <p className="text-sm text-emerald-600 mt-1">
+            Rental run ready — jump to returns for DSCR and cash-on-cash insight.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+interface AcquisitionTabProps {
+  property: PropertyData;
+  purchasePrice: number;
+  analysisType: AnalysisType;
+  rentalResult: RentalResult | null;
+  flipResult: FlipResult | null;
+}
+
+function AcquisitionTab({ property, purchasePrice, analysisType, rentalResult, flipResult }: AcquisitionTabProps) {
+  const equityBuffer =
+    property.market_value_estimate && purchasePrice > 0
+      ? property.market_value_estimate - purchasePrice
+      : null;
+  const rentYield =
+    property.rent_estimate && purchasePrice > 0
+      ? ((property.rent_estimate * 12) / purchasePrice) * 100
+      : null;
+
+  return (
+    <div className="space-y-4">
+      <div className="grid-two">
+        <MetricRow label="Offer target" value={formatCurrency(purchasePrice)} helper="Driven by current assumptions" />
+        <MetricRow
+          label="Market value"
+          value={property.market_value_estimate ? formatCurrency(property.market_value_estimate) : "—"}
+          helper="Blended provider estimate"
+        />
+        <MetricRow
+          label="Rent guidance"
+          value={property.rent_estimate ? formatCurrency(property.rent_estimate) : "—"}
+          helper="Monthly potential"
+        />
+        <MetricRow
+          label="Closing costs"
+          value={property.closing_cost_estimate ? formatCurrency(property.closing_cost_estimate) : "Track during diligence"}
+          helper="From provider if available"
+        />
+        <MetricRow
+          label="Equity buffer"
+          value={equityBuffer !== null ? formatCurrency(equityBuffer) : "—"}
+          helper="Market value minus offer"
+        />
+        <MetricRow
+          label="Gross yield"
+          value={rentYield ? `${rentYield.toFixed(1)}%` : "—"}
+          helper="Annual rent / offer"
+        />
+      </div>
+      <div className="rounded-xl bg-surface-alt/50 border border-border/60 p-4 text-sm text-text-muted">
+        {analysisType === "rental" ? (
+          rentalResult ? (
+            <p>Rental run completed — cap rate {rentalResult.cap_rate_pct.toFixed(2)}% and cash-on-cash {rentalResult.cash_on_cash_return_pct.toFixed(2)}%.</p>
+          ) : (
+            <p>Run the rental analysis to benchmark your target price against NOI, cap rate, and DSCR.</p>
+          )
+        ) : flipResult ? (
+          <p>Flip run completed — projected profit {formatCurrency(flipResult.projected_profit)} with margin {flipResult.margin_pct.toFixed(1)}%.</p>
+        ) : (
+          <p>Run the flip analysis to validate the offer against ARV, carrying costs, and margin requirements.</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+interface FinancingTabProps {
+  financingSnapshot: FinancingSnapshot;
+  rentalResult: RentalResult | null;
+  analysisType: AnalysisType;
+}
+
+function FinancingTab({ financingSnapshot, rentalResult, analysisType }: FinancingTabProps) {
+  return (
+    <div className="space-y-4">
+      <div className="grid-two">
+        <MetricRow label="Down payment" value={`${financingSnapshot.downPaymentPct.toFixed(1)}%`} helper="Equity contribution" />
+        <MetricRow label="Loan amount" value={formatCurrency(financingSnapshot.loanAmount)} helper="Purchase less equity" />
+        <MetricRow
+          label="Interest rate"
+          value={`${financingSnapshot.interestRatePct.toFixed(2)}%`}
+          helper={`${financingSnapshot.loanTermYears} year term`}
+        />
+        <MetricRow
+          label="Monthly debt service"
+          value={formatCurrency(financingSnapshot.monthlyDebtService)}
+          helper="Based on amortized note"
+        />
+        <MetricRow
+          label="Annual debt service"
+          value={formatCurrency(financingSnapshot.annualDebtService)}
+          helper="Used for DSCR"
+        />
+        <MetricRow
+          label="LTV"
+          value={financingSnapshot.ltv ? `${financingSnapshot.ltv.toFixed(1)}%` : "—"}
+          helper="Loan / purchase"
+        />
+      </div>
+      {analysisType === "rental" && (
+        <div className="rounded-xl bg-surface-alt/50 border border-border/60 p-4 text-sm text-text-muted">
+          {rentalResult && financingSnapshot.dscr ? (
+            <p>
+              DSCR at {financingSnapshot.dscr.toFixed(2)} using NOI {formatCurrency(rentalResult.noi_annual)} and annual debt {formatCurrency(financingSnapshot.annualDebtService)}.
+            </p>
+          ) : (
+            <p>Run the rental analysis to compute DSCR using the current loan structure.</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface ReturnsTabProps {
+  analysisType: AnalysisType;
+  rentalResult: RentalResult | null;
+  flipResult: FlipResult | null;
+}
+
+function ReturnsTab({ analysisType, rentalResult, flipResult }: ReturnsTabProps) {
+  if (analysisType === "rental") {
+    if (!rentalResult) {
+      return (
+        <div className="rounded-xl border border-dashed border-border bg-surface-alt/30 p-6 text-center text-text-muted">
+          Run the rental analysis to see NOI, cap rate, and purchase guidance.
+        </div>
+      );
+    }
+
+    return (
+      <ResultsCard
+        entries={[
+          ["Net Operating Income", formatCurrency(rentalResult.noi_annual)],
+          ["Annual Debt Service", formatCurrency(rentalResult.annual_debt_service)],
+          ["Annual Cash Flow", formatCurrency(rentalResult.cash_flow_annual)],
+          ["Cap Rate", `${rentalResult.cap_rate_pct.toFixed(2)}%`],
+          ["Cash on Cash Return", `${rentalResult.cash_on_cash_return_pct.toFixed(2)}%`],
+          ["IRR", rentalResult.irr_pct ? `${rentalResult.irr_pct.toFixed(2)}%` : "—"],
+          [
+            "Suggested Purchase Price",
+            rentalResult.suggested_purchase_price ? formatCurrency(rentalResult.suggested_purchase_price) : "—",
+          ],
+        ]}
+      />
+    );
+  }
+
+  if (!flipResult) {
+    return (
+      <div className="rounded-xl border border-dashed border-border bg-surface-alt/30 p-6 text-center text-text-muted">
+        Run the flip analysis to surface ARV, profit, and margin checks.
+      </div>
+    );
+  }
+
+  return (
+    <ResultsCard
+      entries={[
+        ["After Repair Value", formatCurrency(flipResult.arv)],
+        ["Total Costs", formatCurrency(flipResult.total_costs)],
+        ["Suggested Purchase Price", formatCurrency(flipResult.suggested_purchase_price)],
+        ["Projected Profit", formatCurrency(flipResult.projected_profit)],
+        ["Margin", `${flipResult.margin_pct.toFixed(2)}%`],
+      ]}
+    />
+  );
+}
+
+interface DataRoomTabProps {
+  property: PropertyData;
+  rawEntries: Array<{ key: string; label: string; value: unknown }>;
+  selectedRawKey: string;
+  onSelectRawKey: (key: string) => void;
+  propertyRawForViewer: unknown;
+}
+
+function DataRoomTab({ property, rawEntries, selectedRawKey, onSelectRawKey, propertyRawForViewer }: DataRoomTabProps) {
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <label htmlFor="provider-payload-select" className="text-sm font-medium text-text-muted">
+          Provider snapshot
+        </label>
+        <div className="relative">
+          <select
+            id="provider-payload-select"
+            value={selectedRawKey}
+            onChange={(event) => onSelectRawKey(event.target.value)}
+            className="appearance-none bg-surface-alt border border-border rounded-lg py-2 pl-3 pr-9 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none cursor-pointer"
+          >
+            <option value={MERGED_PAYLOAD_KEY}>Merged Snapshot</option>
+            {rawEntries.map((entry) => (
+              <option key={entry.key} value={entry.key}>
+                {entry.label}
+              </option>
+            ))}
+          </select>
+          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-text-muted">
+            <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" /></svg>
+          </div>
+        </div>
+      </div>
+      <div className="rounded-lg overflow-hidden border border-border/50 shadow-inner bg-surface-alt/30">
+        <JsonCodeBlock data={propertyRawForViewer ?? property} />
+      </div>
+    </div>
+  );
+}
+
+interface MetricRowProps {
+  label: string;
+  value: string;
+  helper?: string;
+}
+
+function MetricRow({ label, value, helper }: MetricRowProps) {
+  return (
+    <div className="flex items-center justify-between rounded-lg border border-border/50 bg-surface-alt/40 p-3">
+      <div className="flex flex-col">
+        <span className="text-sm font-semibold text-text">{label}</span>
+        {helper && <span className="text-xs text-text-muted">{helper}</span>}
+      </div>
+      <span className="text-sm font-bold text-primary whitespace-nowrap">{value}</span>
+    </div>
   );
 }
 
