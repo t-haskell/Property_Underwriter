@@ -1,0 +1,62 @@
+# Memory Bank
+
+This document provides a consolidated, copy-pasteable context map for the Property Underwriter project, combining architecture, data mapping, and workflow notes.
+
+## Top-Level Overview
+- Two-tier product with FastAPI backend (`src/`) and Next.js frontend (`frontend/`); legacy Streamlit UI remains available under `src/app.py`.
+- Convenience scripts: `run_api.sh` (starts FastAPI with Uvicorn) and `run.sh` (launches Streamlit).
+- Persistence defaults to SQLite (`property_underwriter.db`) unless overridden via settings.
+
+## Key Entry Points
+- Backend API: `src/api/main.py` bootstraps routes for health, address search, property fetch, and rental/flip analysis.
+- Frontend: `frontend/app/page.tsx` orchestrates the client experience and calls the API via `frontend/lib/api.ts`.
+- Streamlit fallback: `src/app.py` reuses shared services for quick experiments.
+
+## Directory Map
+- `src/api/`: FastAPI app wiring plus Pydantic request/response schemas.
+- `src/core/`: Domain models (`models.py`) and deterministic financial calculations (`calculations.py`).
+- `src/services/`: Business logic for provider aggregation (`data_fetch.py`), rental/flip orchestration (`analysis_service.py`), address suggestions (`nominatim_places.py`), persistence (`persistence.py`), provider implementations, and support utilities.
+- `src/utils/`: Configuration (`config.py`), logging helpers, and currency formatting.
+- `frontend/`: Next.js 13 app with components, hooks, styles, and API client utilities.
+- `tests/`: Pytest coverage for core calculations, services, and persistence; frontend has Vitest/Storybook tooling available (per README).
+- `docs/` and `PROJECT_SUMMARY.md`: Supplemental documentation.
+
+## Domain & Data Mapping (Backend Models)
+- **Address**: `line1`, `city`, `state`, `zip`; normalizes state casing and rejects blanks.
+- **PropertyData**: `address` plus optional `beds`, `baths`, `sqft`, `lot_sqft`, `year_built`, `market_value_estimate`, `rent_estimate`, `annual_taxes`, `closing_cost_estimate`; metadata in `meta`, provider `sources` (enum: Zillow, Rentometer, ATTOM, ClosingCorp, Estated, RentCast, Redfin, Mock, HUD, Marketplace), and provenance entries. Numeric validators coerce/round values.
+- **SourceAttribution**: Provider name, contributing fields, timestamps, request IDs, and raw references with non-empty checks.
+- **RentalAssumptions**: Down payment %, vacancy %, property management %, closing costs %, interest rate, reserves, insurance, HOA, loan term (years), hold period (years), and optional targets (cap rate, IRR); non-negative with precision rounding.
+- **FlipAssumptions**: Down payment %, interest rate, term, renovation budget, hold time (months), target margin %, buy/sell closing %s, optional ARV override with numeric validation.
+- **RentalResult**: NOI, annual debt service, annual cash flow, cap rate, cash-on-cash return, optional IRR, optional suggested purchase price; coerces/rounds numeric outputs.
+- **FlipResult**: ARV, total costs, suggested purchase price, projected profit, and margin percentage with non-negative enforcement.
+
+## API Surface (Schemas)
+- Payloads mirror domain models via Pydantic schemas in `src/api/schemas.py`: `AddressPayload`, `PropertyDataPayload`, `RentalAssumptionsPayload`, `FlipAssumptionsPayload`.
+- Requests/responses: `PropertyFetchRequest/Response`, `RentalAnalysisRequest/Response`, `FlipAnalysisRequest/Response`.
+- Places endpoints: `Suggestion`, `SuggestionsResponse`, `SuggestionResolveRequest/Response` with normalized state casing.
+
+## Services & Data Flow
+1. **Address intake**: Frontend autocomplete hits `/api/places/suggest` and `/api/places/resolve` (Nominatim-backed) to normalize addresses.
+2. **Property fetch**: `fetch_property` in `src/services/data_fetch.py` normalizes the address, checks persistence/cache, invokes enabled providers (Zillow, Rentometer, Estated, RentCast, Redfin, ATTOM, ClosingCorp, optional Mock/Marketplace/HUD), merges `PropertyData` results preferring newer non-null values, and persists combined output.
+3. **Rental analysis**: `analyze_rental` in `src/services/analysis_service.py` computes NOI, debt service, cash flow, cap rate, cash-on-cash return, IRR, and suggested purchase price using core calculations.
+4. **Flip analysis**: `analyze_flip` in the same service derives ARV, carrying/soft costs, total costs, suggested purchase price, profit, and margin.
+5. **Persistence**: `src/services/persistence.py` stores merged property data, provider provenance, and analysis runs in SQLite for auditability.
+
+## Frontend Experience
+- Next.js UI uses tabbed flow (Overview, Acquisition, Financing, Cashflow & Returns, Data Room) to mirror backend steps.
+- Components handle address intake, assumptions forms, and rendering of analysis outputs; defensive against incomplete API data.
+- API base URL configurable via `NEXT_PUBLIC_API_BASE_URL` in `frontend/.env.local`.
+
+## Configuration & Ops Notes
+- Copy `.env.example` to `.env` and supply provider API keys, timeouts, and `DATABASE_URL` when needed.
+- Settings determine mock provider usage and cache lifetimes.
+- Logging helpers live in `src/utils/logging.py`; currency formatting via `src/utils/currency.py`.
+
+## Delivery Status & Next Steps (from context)
+- Providers wired with graceful fallbacks; address services active; persistence implemented; frontend supports rental/flip flows and payload inspection.
+- Suggested follow-ups: smoke-test providers with real credentials, integrate frontend lint/test into CI, enhance analytics visualizations, and plan for rate limiting or background jobs if provider latency grows.
+
+## Usage Tips
+- Trace property ingestion: address suggest/resolve → `fetch_property` provider aggregation → persistence → `analyze_rental` or `analyze_flip`.
+- When extending providers or UI channels, keep core calculations in `src/core` untouched to preserve determinism.
+- Use this file as a quick ramp guide for new AIs or contributors; update alongside architectural changes.
