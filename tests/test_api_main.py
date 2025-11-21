@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import pytest
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.testclient import TestClient
 
 from src.api import main
+from src.utils.config import Settings
 from src.core.models import (
     Address,
     ApiSource,
@@ -19,6 +21,30 @@ from src.core.models import (
 def client() -> TestClient:
     """Return a FastAPI test client bound to the application under test."""
     return TestClient(main.app, raise_server_exceptions=False)
+
+
+def test_create_app_configures_cors_and_database(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
+    configured: dict[str, str] = {}
+
+    def fake_configure(database_url: str) -> None:
+        configured["database_url"] = database_url
+
+    monkeypatch.setattr(main, "configure", fake_configure)
+
+    database_url = f"sqlite:///{tmp_path/'custom.db'}"
+    settings = Settings(
+        DATABASE_URL=database_url,
+        API_ALLOWED_ORIGINS="https://example.com, http://localhost:4000/",
+    )
+
+    app = main.create_app(settings)
+    with TestClient(app):
+        pass
+
+    assert configured["database_url"] == database_url
+    cors = next((m for m in app.user_middleware if m.cls is CORSMiddleware), None)
+    assert cors is not None
+    assert cors.kwargs["allow_origins"] == ["https://example.com", "http://localhost:4000"]
 
 
 def test_health_endpoint(client: TestClient) -> None:

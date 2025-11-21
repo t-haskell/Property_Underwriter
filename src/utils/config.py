@@ -1,9 +1,38 @@
 from dataclasses import dataclass
 from functools import lru_cache
+from typing import Iterable, List
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from src.utils.logging import logger
+
+DEFAULT_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "https://t-haskell.github.io",
+    "https://propertyunderwriter-production.up.railway.app",
+]
+
+
+def _parse_allowed_origins(raw: str | Iterable[str] | None) -> List[str]:
+    """Normalize a comma/whitespace separated origin list into stable ordering."""
+
+    if raw is None:
+        return []
+
+    if isinstance(raw, str):
+        candidates = [part.strip() for part in raw.split(",")]
+    else:
+        candidates = [item.strip() for item in raw]
+
+    cleaned: List[str] = []
+    for origin in candidates:
+        if not origin:
+            continue
+        normalized = origin.rstrip("/")
+        if normalized not in cleaned:
+            cleaned.append(normalized)
+    return cleaned
 
 
 @dataclass(slots=True)
@@ -105,6 +134,8 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "sqlite:///property_underwriter.db"
     # DATABASE_URL: str = "sqlite:///./property_underwriter.db"
 
+    API_ALLOWED_ORIGINS: str | None = None
+
     CACHE_TTL_MIN: int = 60
     PROVIDER_TIMEOUT_SEC: int = 10
     USE_MOCK_PROVIDER_IF_NO_KEYS: bool = True
@@ -181,6 +212,13 @@ class Settings(BaseSettings):
             max_retries=self.MARKETPLACE_SCRAPING_MAX_RETRIES,
             backoff_seconds=self.MARKETPLACE_SCRAPING_BACKOFF_SEC,
         )
+
+    @property
+    def api_allowed_origins(self) -> List[str]:
+        configured = _parse_allowed_origins(self.API_ALLOWED_ORIGINS)
+        if configured:
+            return configured
+        return list(DEFAULT_ALLOWED_ORIGINS)
 
 
 @lru_cache(maxsize=1)

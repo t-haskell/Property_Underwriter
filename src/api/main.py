@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
 from typing import List
 
 from fastapi import Depends, FastAPI, HTTPException
@@ -14,14 +15,15 @@ from ..core.models import (
     RentalAssumptions,
     FlipAssumptions,
 )
-from ..utils.logging import logger
 from ..services.analysis_service import analyze_flip, analyze_rental
 from ..services.data_fetch import fetch_property
 from ..services.nominatim_places import (
     get_address_from_suggestion,
     get_place_suggestions,
 )
-from ..services.persistence import PropertyRepository, get_repository
+from ..services.persistence import PropertyRepository, configure, get_repository
+from ..utils.config import DEFAULT_ALLOWED_ORIGINS, Settings, settings
+from ..utils.logging import logger
 from .schemas import (
     AddressPayload,
     FlipAnalysisRequest,
@@ -39,44 +41,42 @@ from .schemas import (
     Suggestion,
 )
 
-app = FastAPI(title="Property Underwriter API", version="0.1.0")
 
-# Allow your frontend origins during development
-ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "https://t-haskell.github.io",
-    "https://propertyunderwriter-production.up.railway.app",
-]
+def _lifespan_factory(app_settings: Settings):
+    @asynccontextmanager
+    async def _lifespan(_: FastAPI):
+        configure(app_settings.DATABASE_URL)
+        logger.info("Database initialized using %s", app_settings.DATABASE_URL)
+        yield
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,   # be explicit when using credentials
-    allow_credentials=True,          # set True only if you send cookies/auth headers
-    allow_methods=["*"],             # or enumerate (e.g., ["GET","POST"])
-    allow_headers=["*"],             # or enumerate needed headers
-)
+    return _lifespan
 
 
-@app.on_event("startup")
-async def startup_event():
-    """Initialize the database when the application starts."""
-    from ..services.persistence import init_engine
-    from pathlib import Path
+def create_app(app_settings: Settings = settings) -> FastAPI:
+    """Application factory to simplify configuration for deployments and tests."""
 
-    
-    # Get the project root directory
-    project_root = Path(__file__).parent.parent.parent
-    db_path = project_root / "property_underwriter.db"
-    
-    try:
-        # Use an absolute path for the database
-        database_url = f"sqlite:///{db_path}"
-        init_engine(database_url)
-        logger.info(f"Database initialized successfully at {db_path}")
-    except Exception as e:
-        logger.error(f"Failed to initialize database: {e}")
-        raise
+    app = FastAPI(
+        title="Property Underwriter API",
+        version="0.1.0",
+        lifespan=_lifespan_factory(app_settings),
+    )
+
+    allowed_origins = app_settings.api_allowed_origins
+    if allowed_origins != DEFAULT_ALLOWED_ORIGINS:
+        logger.info("Using custom CORS origins: %s", allowed_origins)
+
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=allowed_origins,  # be explicit when using credentials
+        allow_credentials=True,  # set True only if you send cookies/auth headers
+        allow_methods=["*"],  # or enumerate (e.g., ["GET","POST"])
+        allow_headers=["*"],  # or enumerate needed headers
+    )
+
+    return app
+
+
+app = create_app()
 
 
 def _repository_dependency() -> PropertyRepository:
