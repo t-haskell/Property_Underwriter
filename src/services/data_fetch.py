@@ -10,16 +10,32 @@ from .data_providers import (
     HudFmrProvider,
     MarketplaceCompsProvider,
 )
+from .property_merging import (
+    ProviderCache,
+    ProviderName,
+    NormalizedPropertyRecord,
+    cached_record_key,
+    merge_property_records,
+    normalize_property_data,
+)
+from .providers.config import mass_gis, md_imap
+from .providers.estated_client import EstatedClient, normalize_estated
 from .providers.attom import AttomProvider
 from .providers.base import PropertyDataProvider
 from .providers.closingcorp import ClosingcorpProvider
 from .providers.estated import EstatedProvider
+from .providers.mass_gis_client import MassGisClient, normalize_mass_gis
 from .providers.mock import MockProvider
+from .providers.md_imap_client import MdImapClient, normalize_md_imap
 from .providers.rentometer import RentometerProvider
 from .providers.rentcast import RentcastProvider
+from .providers.rentcast_client import RentcastClient, normalize_rentcast
 from .providers.redfin import RedfinProvider
 from .providers.zillow import ZillowProvider
 from .persistence import get_repository
+
+
+_provider_cache = ProviderCache(settings.CACHE_TTL_MIN)
 
 
 def merge(a: PropertyData, b: PropertyData) -> PropertyData:
@@ -160,6 +176,85 @@ def _build_aggregation_service(
         marketplace_provider=marketplace_provider,
     )
 
+
+def _fetch_with_cache(
+    provider_name: str,
+    address: Address,
+    fetch_fn,
+    normalize_fn,
+):  # noqa: ANN001
+    cache_key = cached_record_key(provider_name, address)
+    cached_record = _provider_cache.get(cache_key)
+    if cached_record:
+        return cached_record
+
+    result = fetch_fn(address)
+    if result is None:
+        return None
+
+    normalized = normalize_fn(result)
+    _provider_cache.set(cache_key, normalized)
+    return normalized
+
+
+def _collect_normalized_records(
+    address: Address, cached: PropertyData | None
+) -> List[NormalizedPropertyRecord]:
+    records: List[NormalizedPropertyRecord] = []
+
+    if cached:
+        records.append(normalize_property_data(ProviderName.CACHED, cached, raw=cached.meta))
+
+    if address.state == "MD":
+        md_config = settings.md_imap
+        if md_config.base_url and md_config.layer_id:
+            md_client = MdImapClient(md_config.base_url, md_config.layer_id, timeout=md_config.timeout)
+            record = _fetch_with_cache(ProviderName.MD_IMAP, address, md_client.get_by_address, normalize_md_imap)
+            if record and _is_residential(record):
+                records.append(record)
+
+    if address.state == "MA":
+        ma_config = settings.mass_gis
+        if ma_config.base_url and ma_config.layer_id:
+            ma_client = MassGisClient(ma_config.base_url, ma_config.layer_id, timeout=ma_config.timeout)
+            record = _fetch_with_cache(ProviderName.MASS_GIS, address, ma_client.get_by_address, normalize_mass_gis)
+            if record and _is_residential(record):
+                records.append(record)
+
+    if settings.rentcast.api_key:
+        rentcast_client = RentcastClient(
+            api_key=settings.rentcast.api_key,
+            base_url=settings.rentcast.base_url,
+            timeout=settings.rentcast.timeout,
+        )
+        record = _fetch_with_cache(ProviderName.RENTCAST, address, rentcast_client.get_by_address, normalize_rentcast)
+        if record:
+            records.append(record)
+
+    if settings.estated.api_key:
+        estated_client = EstatedClient(
+            api_key=settings.estated.api_key,
+            base_url=settings.estated.base_url,
+            timeout=settings.estated.timeout,
+        )
+        record = _fetch_with_cache(ProviderName.ESTATED, address, estated_client.get_by_address, normalize_estated)
+        if record:
+            records.append(record)
+
+    return records
+
+
+def _is_residential(record: NormalizedPropertyRecord) -> bool:
+    if record.provider == ProviderName.MD_IMAP:
+        if md_imap.RESIDENTIAL_LAND_USE_CODES:
+            return record.land_use_code in md_imap.RESIDENTIAL_LAND_USE_CODES
+        return True
+    if record.provider == ProviderName.MASS_GIS:
+        if mass_gis.RESIDENTIAL_LAND_USE_CODES:
+            return record.land_use_code in mass_gis.RESIDENTIAL_LAND_USE_CODES
+        return True
+    return True
+
 def normalize_address(address: Address) -> Address:
     return Address(
         line1=address.line1.strip().upper(),
@@ -196,6 +291,18 @@ def fetch_property(
             "Cached property found for %s but missing provider raw payload; attempting refresh",
             normalized_address,
         )
+
+    normalized_records = _collect_normalized_records(normalized_address, cached)
+    has_live_records = any(record.provider != ProviderName.CACHED for record in normalized_records)
+
+    if has_live_records:
+        try:
+            merged = merge_property_records(normalized_records)
+        except ValueError:
+            merged = None
+        if merged:
+            repository.upsert_property(merged.property)
+            return merged.property
 
     address = normalized_address
     aggregation_service = _build_aggregation_service(providers)
