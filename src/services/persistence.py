@@ -4,7 +4,7 @@ import json
 import sqlite3
 from contextlib import contextmanager
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterable, Iterator, List, Optional
 
@@ -321,7 +321,7 @@ class PropertyRepository:
 
             self._replace_sources(conn, property_id, property_data.sources)
 
-            created_at = datetime.now(UTC).replace(microsecond=0).isoformat()
+            created_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
             conn.execute(
                 """
                 INSERT INTO analysis_runs (
@@ -386,7 +386,7 @@ class PropertyRepository:
                 try:
                     created_at = datetime.fromisoformat(created_at_raw)
                 except ValueError:
-                    created_at = datetime.now(UTC)
+                    created_at = datetime.now(timezone.utc)
 
                 snapshots.append(
                     AnalysisSnapshot(

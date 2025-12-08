@@ -3,6 +3,8 @@ import type {
   FlipAssumptions,
   FlipResult,
   PropertyData,
+  PropertyQARequest,
+  PropertyQAResponse,
   RentalAssumptions,
   RentalResult,
   Suggestion,
@@ -77,5 +79,14 @@ export async function runFlipAnalysis(
     body: JSON.stringify({ property, assumptions, candidate_price }),
   });
   return handleResponse<FlipResult>(response);
+}
+
+export async function runPropertyQA(payload: PropertyQARequest): Promise<PropertyQAResponse> {
+  const response = await fetch(buildApiUrl("/api/ml/property_qa"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  return handleResponse<PropertyQAResponse>(response);
 }
 

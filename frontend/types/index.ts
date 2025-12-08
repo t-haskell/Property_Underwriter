@@ -77,3 +77,17 @@ export interface FlipResult {
   projected_profit: number;
   margin_pct: number;
 }
+
+export interface PropertyQARequest {
+  question: string;
+  address?: string | null;
+  year_built?: number | null;
+  occupancy?: string | null;
+  known_hazards?: string | null;
+}
+
+export interface PropertyQAResponse {
+  answer: string;
+  risk_score: string;
+  debug?: Record<string, unknown>;
+}
