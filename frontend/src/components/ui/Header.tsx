@@ -23,6 +23,7 @@ export interface HeaderProps {
 export const Header = ({
   links = [
     { href: '/', label: 'Home' },
+    { href: '/property-qa', label: 'Property Q&A' },
     { href: '/examples/motion', label: 'Motion' },
   ],
   actions,

@@ -129,7 +129,9 @@ export ML_API_URL="https://api.example.com/property-qa"
 export ML_API_KEY="sk_your_key_here"
 ```
 
-> Frontend note: this repository does not yet expose a UI tab for the new endpoint. Add a small client call from your UI of choice (e.g., Next.js) to POST to `/api/ml/property_qa` and render the `answer` and `risk_score` fields.
+Frontend experience:
+
+- The Next.js app now includes a dedicated page at `/property-qa` with a form that calls `/api/ml/property_qa` and surfaces the response, risk score, and debug payload. Use `NEXT_PUBLIC_API_BASE_URL` if your API is not running at the default `http://127.0.0.1:8000`.
 
 ## API Overview
 
