@@ -212,7 +212,7 @@ export default function PropertyQA() {
             </div>
           ) : (
             <div className="rounded-xl border border-dashed border-border bg-surface-alt/50 p-6 text-sm text-text-muted">
-              Run a query to see the assistant's response and risk score. We'll show any backend debug metadata here, too.
+              Run a query to see the assistant&apos;s response and risk score. We&apos;ll show any backend debug metadata here, too.
             </div>
           )}
         </aside>
