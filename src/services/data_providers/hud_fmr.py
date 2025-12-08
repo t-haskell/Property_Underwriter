@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, Optional
 
 import httpx
@@ -124,13 +124,13 @@ class HudFmrProvider(BaseDataProvider):
             return None
 
         expires_at, result = entry
-        if datetime.now(UTC) > expires_at:
+        if datetime.now(timezone.utc) > expires_at:
             getattr(self, "_cache", {}).pop(zip_code, None)
             return None
         return result
 
     def _cache_result(self, zip_code: str, result: ProviderResult) -> None:
-        expiry = datetime.now(UTC) + timedelta(minutes=self.cache_ttl_min)
+        expiry = datetime.now(timezone.utc) + timedelta(minutes=self.cache_ttl_min)
         if not hasattr(self, "_cache"):
             self._cache = {}
         self._cache[zip_code] = (expiry, result)

@@ -7,6 +7,7 @@ from typing import List
 
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from .ml import router as ml_router
 
 from ..core.models import (
     Address,
@@ -72,6 +73,8 @@ def create_app(app_settings: Settings = settings) -> FastAPI:
         allow_methods=["*"],  # or enumerate (e.g., ["GET","POST"])
         allow_headers=["*"],  # or enumerate needed headers
     )
+
+    app.include_router(ml_router)
 
     return app
 

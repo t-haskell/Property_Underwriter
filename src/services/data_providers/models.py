@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from ...core.models import ApiSource, PropertyData, SourceAttribution
@@ -116,7 +116,7 @@ class PropertyDataPatch:
 @dataclass(slots=True)
 class ProviderMetadata:
     provider_name: str
-    fetched_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    fetched_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     request_id: Optional[str] = None
 
 

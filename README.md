@@ -110,6 +110,27 @@ Open http://localhost:3000 in your browser. The development server proxies API c
 ```
 The Streamlit experience remains useful for quick prototypes or side-by-side validation of the API results.
 
+## Property Q&A (ML) API
+
+The backend includes a lightweight property Q&A endpoint that combines deterministic heuristics with an optional remote inference hook.
+
+- **Endpoint:** `POST /api/ml/property_qa`
+- **Request body:** JSON with fields `question`, `address` (optional), `year_built` (optional), `occupancy` (optional), and `known_hazards` (optional)
+- **Response:** JSON `{ "answer": str, "risk_score": "low|medium|high", "debug": {...} }`
+
+Behavior:
+- By default, the endpoint returns a rule-based answer and a simple risk heuristic.
+- If you set `ML_API_URL` and `ML_API_KEY` in the environment, the server will attempt a remote inference call with payload `{question, context}` and expect `{answer, risk_score}`. Failures automatically fall back to the local logic while exposing debug metadata.
+
+Example configuration:
+
+```bash
+export ML_API_URL="https://api.example.com/property-qa"
+export ML_API_KEY="sk_your_key_here"
+```
+
+> Frontend note: this repository does not yet expose a UI tab for the new endpoint. Add a small client call from your UI of choice (e.g., Next.js) to POST to `/api/ml/property_qa` and render the `answer` and `risk_score` fields.
+
 ## API Overview
 
 | Method & Path | Description |
