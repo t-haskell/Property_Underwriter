@@ -31,7 +31,7 @@ from ..services.nominatim_places import (
     get_address_from_suggestion,
     get_place_suggestions,
 )
-from ..services.persistence import PropertyRepository, configure, get_repository
+from ..services.persistence import PropertyRepository, create_repository
 from ..utils.config import DEFAULT_ALLOWED_ORIGINS, Settings, settings
 from ..utils.logging import logger
 from .schemas import (
@@ -54,8 +54,9 @@ from .schemas import (
 
 def _lifespan_factory(app_settings: Settings):
     @asynccontextmanager
-    async def _lifespan(_: FastAPI):
-        configure(app_settings.DATABASE_URL)
+    async def _lifespan(app: FastAPI):
+        # Store the repository on the application for FastAPI dependency injection.
+        app.state.repository = create_repository(app_settings.DATABASE_URL)
         logger.info("Database initialized using %s", app_settings.DATABASE_URL)
         yield
 
@@ -156,10 +157,10 @@ def create_app(app_settings: Settings = settings) -> FastAPI:
 app = create_app()
 
 
-def _repository_dependency() -> PropertyRepository:
-    """Resolve a property repository using the latest configuration."""
+def _repository_dependency(request: Request) -> PropertyRepository:
+    """Resolve a property repository via DI (override in tests when needed)."""
 
-    return get_repository()
+    return request.app.state.repository
 
 def _address_from_payload(payload: AddressPayload) -> Address:
     return Address(

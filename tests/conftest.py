@@ -1,4 +1,3 @@
-import importlib
 import sys
 from pathlib import Path
 
@@ -11,16 +10,23 @@ if str(ROOT) not in sys.path:
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-configure = importlib.import_module("src.services.persistence").configure
-ScaffoldingIncomplete = importlib.import_module("src.utils.scaffolding").ScaffoldingIncomplete
+from src.services.persistence import create_repository
+from src.utils.scaffolding import ScaffoldingIncomplete
 
 
 @pytest.fixture(autouse=True)
-def _configure_test_database(tmp_path) -> None:
+def _configure_test_database(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Ensure each test runs against an isolated SQLite database."""
 
     db_path = tmp_path / "underwriter.db"
-    configure(f"sqlite+pysqlite:///{db_path}")
+    repository = create_repository(f"sqlite+pysqlite:///{db_path}")
+    monkeypatch.setattr("src.services.data_fetch.get_repository", lambda: repository)
+    monkeypatch.setattr("src.services.persistence.get_repository", lambda: repository)
+    monkeypatch.setattr("src.api.main.create_repository", lambda _: repository)
+
+    from src.api import main
+
+    monkeypatch.setattr(main.app.state, "repository", repository, raising=False)
 
 
 @pytest.hookimpl(tryfirst=True, hookwrapper=True)
