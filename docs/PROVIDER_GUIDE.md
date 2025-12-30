@@ -9,7 +9,7 @@ The ingestion layer uses `BaseDataProvider` from `src/services/data_providers/ba
 Key concepts:
 
 - **`BaseDataProvider`** defines `fetch_for_property(address)` and an optional `fetch_for_area(area_identifier)` method.
-- **`ProviderMetadata`** includes `provider_name` (required string identifier), optional `provider_id`, `fetched_at` (timezone-aware), and optional `request_id`.
+- **`ProviderMetadata`** includes `provider_name` (required string identifier), optional `provider_id`, optional `fetched_at` (timezone-aware), and optional `request_id`.
 - **`ProviderResult`** encapsulates provider metadata, a typed payload (`PropertyDataPatch` and/or `AreaRentBenchmark` list), optional raw payload, and errors.
 - **`PropertyDataPatch`** carries partial updates (beds, baths, rent estimates, etc.) plus metadata and provenance fields.
 
