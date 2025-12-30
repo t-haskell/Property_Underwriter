@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import List, Optional
 
+from ..core.exceptions import AggregationError, PersistenceError, ProviderError
 from ..core.models import Address, PropertyData
 from ..utils.config import settings
 from ..utils.logging import logger
@@ -181,7 +182,13 @@ def fetch_property(
     repository = get_repository()
     normalized_address = normalize_address(address)
 
-    cached = repository.get_property(normalized_address)
+    try:
+        cached = repository.get_property(normalized_address)
+    except Exception as exc:
+        raise PersistenceError(
+            "Failed to read cached property data.",
+            details={"address": normalized_address.model_dump()},
+        ) from exc
     if cached:
         has_raw_payload = any(
             key.lower().endswith("_raw") for key in (cached.meta or {}).keys()
@@ -208,14 +215,32 @@ def fetch_property(
             return cached
         if use_mock_if_empty:
             logger.info("No providers configured; using mock fallback.")
-            result = MockProvider().fetch(address)
+            try:
+                result = MockProvider().fetch(address)
+            except Exception as exc:
+                raise ProviderError(
+                    "Mock provider failed while fetching fallback data.",
+                    details={"provider": "MockProvider"},
+                ) from exc
             if result:
-                repository.upsert_property(result)
+                try:
+                    repository.upsert_property(result)
+                except Exception as exc:
+                    raise PersistenceError(
+                        "Failed to persist mock property data.",
+                        details={"address": address.model_dump()},
+                    ) from exc
             return result
         logger.warning("No property data providers configured; returning None.")
         return None
 
-    aggregated = aggregation_service.aggregate(address, existing=cached)
+    try:
+        aggregated = aggregation_service.aggregate(address, existing=cached)
+    except Exception as exc:
+        raise AggregationError(
+            "Failed to aggregate provider data.",
+            details={"address": address.model_dump()},
+        ) from exc
 
     has_payload = any(
         getattr(aggregated, field) is not None
@@ -233,7 +258,13 @@ def fetch_property(
     ) or bool(aggregated.meta)
 
     if aggregated and has_payload:
-        repository.upsert_property(aggregated)
+        try:
+            repository.upsert_property(aggregated)
+        except Exception as exc:
+            raise PersistenceError(
+                "Failed to persist aggregated property data.",
+                details={"address": address.model_dump()},
+            ) from exc
         return aggregated
 
     if cached:
@@ -247,11 +278,20 @@ def fetch_property(
         logger.info("No provider returned data; using mock fallback for %s", address)
         try:
             result = MockProvider().fetch(address)
-            if result:
-                repository.upsert_property(result)
-            return result
         except Exception as exc:  # pragma: no cover - defensive
             logger.exception("MockProvider failed to generate fallback data: %s", exc)
-            return None
+            raise ProviderError(
+                "Mock provider failed while generating fallback data.",
+                details={"provider": "MockProvider"},
+            ) from exc
+        if result:
+            try:
+                repository.upsert_property(result)
+            except Exception as exc:
+                raise PersistenceError(
+                    "Failed to persist mock property data.",
+                    details={"address": address.model_dump()},
+                ) from exc
+        return result
 
     return None

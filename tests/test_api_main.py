@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.testclient import TestClient
 
 from src.api import main
+from src.core.exceptions import ProviderError, ValidationError
 from src.utils.config import Settings
 from src.core.models import (
     Address,
@@ -239,10 +240,52 @@ def test_property_fetch_not_found(monkeypatch: pytest.MonkeyPatch, client: TestC
     response = client.post("/api/property/fetch", json={"address": _property_payload()["address"]})
 
     assert response.status_code == 404
-    assert response.json() == {"detail": "Property not found"}
+    assert response.json() == {
+        "error": {
+            "type": "HttpError",
+            "message": "Property not found",
+            "details": {"status_code": 404},
+        }
+    }
 
 
-def test_property_fetch_dependency_error(monkeypatch: pytest.MonkeyPatch, client: TestClient) -> None:
+def test_property_fetch_provider_error(monkeypatch: pytest.MonkeyPatch, client: TestClient) -> None:
+    def fake_fetch_property(address: Address):
+        raise ProviderError("provider unavailable", details={"provider": "demo"})
+
+    monkeypatch.setattr(main, "fetch_property", fake_fetch_property)
+
+    response = client.post("/api/property/fetch", json={"address": _property_payload()["address"]})
+
+    assert response.status_code == 503
+    assert response.json() == {
+        "error": {
+            "type": "ProviderError",
+            "message": "provider unavailable",
+            "details": {"provider": "demo"},
+        }
+    }
+
+
+def test_property_fetch_validation_error(monkeypatch: pytest.MonkeyPatch, client: TestClient) -> None:
+    def fake_fetch_property(address: Address):
+        raise ValidationError("invalid address", details={"field": "line1"})
+
+    monkeypatch.setattr(main, "fetch_property", fake_fetch_property)
+
+    response = client.post("/api/property/fetch", json={"address": _property_payload()["address"]})
+
+    assert response.status_code == 400
+    assert response.json() == {
+        "error": {
+            "type": "ValidationError",
+            "message": "invalid address",
+            "details": {"field": "line1"},
+        }
+    }
+
+
+def test_property_fetch_unknown_error(monkeypatch: pytest.MonkeyPatch, client: TestClient) -> None:
     def fake_fetch_property(address: Address):
         raise RuntimeError("provider unavailable")
 
@@ -251,7 +294,13 @@ def test_property_fetch_dependency_error(monkeypatch: pytest.MonkeyPatch, client
     response = client.post("/api/property/fetch", json={"address": _property_payload()["address"]})
 
     assert response.status_code == 500
-    assert response.json() == {"detail": "provider unavailable"}
+    assert response.json() == {
+        "error": {
+            "type": "InternalServerError",
+            "message": "Internal Server Error",
+            "details": None,
+        }
+    }
 
 
 def _rental_assumptions_payload() -> dict:
@@ -330,8 +379,14 @@ def test_rental_analysis_dependency_error(monkeypatch: pytest.MonkeyPatch, clien
     )
 
     assert response.status_code == 500
-    assert response.headers["content-type"].startswith("text/plain")
-    assert response.text == "Internal Server Error"
+    assert response.headers["content-type"].startswith("application/json")
+    assert response.json() == {
+        "error": {
+            "type": "InternalServerError",
+            "message": "Internal Server Error",
+            "details": None,
+        }
+    }
 
 
 def _flip_assumptions_payload() -> dict:
@@ -403,5 +458,11 @@ def test_flip_analysis_dependency_error(monkeypatch: pytest.MonkeyPatch, client:
     )
 
     assert response.status_code == 500
-    assert response.headers["content-type"].startswith("text/plain")
-    assert response.text == "Internal Server Error"
+    assert response.headers["content-type"].startswith("application/json")
+    assert response.json() == {
+        "error": {
+            "type": "InternalServerError",
+            "message": "Internal Server Error",
+            "details": None,
+        }
+    }

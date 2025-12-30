@@ -3,12 +3,21 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
-from typing import List
+from typing import Any, List
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from .ml import router as ml_router
 
+from ..core.exceptions import (
+    AggregationError,
+    ConfigError,
+    PersistenceError,
+    PropertyUnderwriterError,
+    ProviderError,
+    ValidationError,
+)
 from ..core.models import (
     Address,
     ApiSource,
@@ -53,6 +62,70 @@ def _lifespan_factory(app_settings: Settings):
     return _lifespan
 
 
+def _error_payload(error_type: str, message: str, details: Any | None) -> dict[str, Any]:
+    return {
+        "error": {
+            "type": error_type,
+            "message": message,
+            "details": details,
+        }
+    }
+
+
+def _status_code_for_error(exc: PropertyUnderwriterError) -> int:
+    if isinstance(exc, ValidationError):
+        return 400
+    if isinstance(exc, ConfigError):
+        return 400 if exc.is_user_error else 500
+    if isinstance(exc, ProviderError):
+        # 503 because the failure is in upstream providers.
+        return 503
+    if isinstance(exc, AggregationError):
+        return 502
+    if isinstance(exc, PersistenceError):
+        return 500
+    return 500
+
+
+def _register_exception_handlers(app: FastAPI) -> None:
+    @app.exception_handler(PropertyUnderwriterError)
+    def _handle_property_underwriter_error(
+        _: Request, exc: PropertyUnderwriterError
+    ) -> JSONResponse:
+        status_code = _status_code_for_error(exc)
+        return JSONResponse(
+            status_code=status_code,
+            content=_error_payload(
+                exc.__class__.__name__,
+                str(exc),
+                exc.details,
+            ),
+        )
+
+    @app.exception_handler(HTTPException)
+    def _handle_http_exception(_: Request, exc: HTTPException) -> JSONResponse:
+        return JSONResponse(
+            status_code=exc.status_code,
+            content=_error_payload(
+                "HttpError",
+                str(exc.detail),
+                {"status_code": exc.status_code},
+            ),
+        )
+
+    @app.exception_handler(Exception)
+    def _handle_unexpected_exception(_: Request, exc: Exception) -> JSONResponse:
+        logger.exception("Unhandled exception surfaced to API: %s", exc)
+        return JSONResponse(
+            status_code=500,
+            content=_error_payload(
+                "InternalServerError",
+                "Internal Server Error",
+                None,
+            ),
+        )
+
+
 def create_app(app_settings: Settings = settings) -> FastAPI:
     """Application factory to simplify configuration for deployments and tests."""
 
@@ -75,6 +148,7 @@ def create_app(app_settings: Settings = settings) -> FastAPI:
     )
 
     app.include_router(ml_router)
+    _register_exception_handlers(app)
 
     return app
 
@@ -239,14 +313,11 @@ def resolve_suggestion(payload: SuggestionResolveRequest) -> SuggestionResolveRe
 
 @app.post("/api/property/fetch", response_model=PropertyFetchResponse)
 def property_fetch(payload: PropertyFetchRequest) -> PropertyFetchResponse:
-    try:
-        logger.info("**********Entering property_fetch... for address: %s", payload.address)
-        address = _address_from_payload(payload.address)
-        logger.info("**********Fetching property data for address: %s", address)
-        property_data = fetch_property(address)
-        logger.debug("**********Fetched property data: %s", property_data)
-    except Exception as exc:  # pragma: no cover - surface to client
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    logger.info("**********Entering property_fetch... for address: %s", payload.address)
+    address = _address_from_payload(payload.address)
+    logger.info("**********Fetching property data for address: %s", address)
+    property_data = fetch_property(address)
+    logger.debug("**********Fetched property data: %s", property_data)
 
     if property_data is None:
         raise HTTPException(status_code=404, detail="Property not found")
