@@ -8,8 +8,8 @@ from src.core.models import (
     RentalAssumptions,
     RentalResult,
 )
-from src.services.data_fetch import fetch_property
-from src.services.persistence import configure, get_repository
+from src.services import data_fetch
+from src.services.persistence import create_repository
 
 
 def build_property() -> PropertyData:
@@ -32,8 +32,7 @@ def build_property() -> PropertyData:
 
 def test_property_repository_round_trip(tmp_path):
     db_url = f"sqlite+pysqlite:///{tmp_path / 'repo.db'}"
-    configure(db_url)
-    repository = get_repository()
+    repository = create_repository(db_url)
 
     property_data = build_property()
     saved = repository.upsert_property(property_data)
@@ -116,15 +115,25 @@ def test_property_repository_round_trip(tmp_path):
     assert isinstance(rental_snapshot.created_at, datetime)
 
 
-def test_fetch_property_uses_cached_data(tmp_path):
+def test_fetch_property_uses_cached_data(tmp_path, monkeypatch):
     db_url = f"sqlite+pysqlite:///{tmp_path / 'cache.db'}"
-    configure(db_url)
-    repository = get_repository()
+    repository = create_repository(db_url)
+    monkeypatch.setattr(data_fetch, "get_repository", lambda: repository)
 
     property_data = build_property()
     repository.upsert_property(property_data)
 
-    fetched = fetch_property(property_data.address, use_mock_if_empty=False)
+    fetched = data_fetch.fetch_property(property_data.address, use_mock_if_empty=False)
     assert fetched is not None
     assert fetched.market_value_estimate == property_data.market_value_estimate
     assert fetched.sources == property_data.sources
+
+
+def test_repositories_do_not_share_state(tmp_path):
+    repo_a = create_repository(f"sqlite+pysqlite:///{tmp_path / 'one.db'}")
+    repo_b = create_repository(f"sqlite+pysqlite:///{tmp_path / 'two.db'}")
+
+    property_data = build_property()
+    repo_a.upsert_property(property_data)
+
+    assert repo_b.get_property(property_data.address) is None

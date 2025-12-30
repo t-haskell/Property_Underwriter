@@ -27,10 +27,11 @@ def client() -> TestClient:
 def test_create_app_configures_cors_and_database(tmp_path, monkeypatch: pytest.MonkeyPatch) -> None:
     configured: dict[str, str] = {}
 
-    def fake_configure(database_url: str) -> None:
+    def fake_create_repository(database_url: str):
         configured["database_url"] = database_url
+        return object()
 
-    monkeypatch.setattr(main, "configure", fake_configure)
+    monkeypatch.setattr(main, "create_repository", fake_create_repository)
 
     database_url = f"sqlite:///{tmp_path/'custom.db'}"
     settings = Settings(
@@ -43,6 +44,7 @@ def test_create_app_configures_cors_and_database(tmp_path, monkeypatch: pytest.M
         pass
 
     assert configured["database_url"] == database_url
+    assert app.state.repository is not None
     cors = next((m for m in app.user_middleware if m.cls is CORSMiddleware), None)
     assert cors is not None
     assert cors.kwargs["allow_origins"] == ["https://example.com", "http://localhost:4000"]

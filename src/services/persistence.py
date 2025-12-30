@@ -29,11 +29,6 @@ class AnalysisSnapshot:
     created_at: datetime
 
 
-_database_path: str | None = None
-_shared_connection: sqlite3.Connection | None = None
-_repository: "PropertyRepository" | None = None
-
-
 def _normalize_address(address: Address) -> Address:
     return Address(
         line1=address.line1.strip().upper(),
@@ -150,77 +145,54 @@ def _ensure_schema(conn: sqlite3.Connection) -> None:
     conn.commit()
 
 
-def _create_connection() -> sqlite3.Connection:
-    global _shared_connection
-
-    if _database_path is None:
-        raise RuntimeError("Database has not been configured")
-
-    if _database_path == ":memory:":
-        if _shared_connection is None:
-            _shared_connection = sqlite3.connect(
-                ":memory:", detect_types=sqlite3.PARSE_DECLTYPES, check_same_thread=False
-            )
-            _shared_connection.row_factory = sqlite3.Row
-            _ensure_schema(_shared_connection)
-        return _shared_connection
-
-    db_path = Path(_database_path)
-    db_path.parent.mkdir(parents=True, exist_ok=True)
-
-    conn = sqlite3.connect(
-        str(db_path), detect_types=sqlite3.PARSE_DECLTYPES, check_same_thread=False
-    )
-    conn.row_factory = sqlite3.Row
-    _ensure_schema(conn)
-    return conn
-
-
-@contextmanager
-def _connection() -> Iterator[sqlite3.Connection]:
-    conn = _create_connection()
-    try:
-        yield conn
-        conn.commit()
-    finally:
-        if conn is not _shared_connection:
-            conn.close()
-
-
-def init_engine(database_url: Optional[str] = None) -> str:
-    global _database_path, _shared_connection
-
-    resolved_url = database_url or settings.DATABASE_URL
-    if not resolved_url:
-        raise ValueError("DATABASE_URL must be configured")
-
-    database_path = _resolve_database_path(resolved_url)
-    if _database_path == database_path:
-        return database_path
-
-    if _shared_connection is not None:
-        _shared_connection.close()
-        _shared_connection = None
-
-    _database_path = database_path
-
-    with _connection():
-        pass
-
-    logger.debug("Initialised database engine at %s", resolved_url)
-    return database_path
-
-
 class PropertyRepository:
     """Repository encapsulating persistence for property and analysis data."""
 
-    def __init__(self) -> None:
-        if _database_path is None:
-            init_engine()
+    def __init__(self, database_url: str) -> None:
+        if not database_url:
+            raise ValueError("DATABASE_URL must be configured")
+        self._database_url = database_url
+        self._database_path = _resolve_database_path(database_url)
+        self._shared_connection: sqlite3.Connection | None = None
+
+        with self._connection():
+            pass
+
+        logger.debug("Initialised database engine at %s", database_url)
+
+    def _create_connection(self) -> sqlite3.Connection:
+        if self._database_path == ":memory:":
+            if self._shared_connection is None:
+                self._shared_connection = sqlite3.connect(
+                    ":memory:", detect_types=sqlite3.PARSE_DECLTYPES, check_same_thread=False
+                )
+                self._shared_connection.row_factory = sqlite3.Row
+                _ensure_schema(self._shared_connection)
+            return self._shared_connection
+
+        db_path = Path(self._database_path)
+        db_path.parent.mkdir(parents=True, exist_ok=True)
+
+        conn = sqlite3.connect(
+            str(db_path), detect_types=sqlite3.PARSE_DECLTYPES, check_same_thread=False
+        )
+        conn.row_factory = sqlite3.Row
+        _ensure_schema(conn)
+        return conn
+
+    @contextmanager
+    def _connection(self) -> Iterator[sqlite3.Connection]:
+        conn = self._create_connection()
+        try:
+            yield conn
+            conn.commit()
+        finally:
+            if conn is not self._shared_connection:
+                conn.close()
 
     def get_property(self, address: Address) -> Optional[PropertyData]:
         normalized = _normalize_address(address)
-        with _connection() as conn:
+        with self._connection() as conn:
             record = self._get_record(conn, normalized)
             if record is None:
                 return None
@@ -228,7 +200,7 @@ class PropertyRepository:
 
     def upsert_property(self, data: PropertyData) -> PropertyData:
         normalized = _normalize_address(data.address)
-        with _connection() as conn:
+        with self._connection() as conn:
             record = self._get_record(conn, normalized)
             provenance_meta = (
                 {"provenance": [item.model_dump(mode="json") for item in data.provenance]}
@@ -283,7 +255,7 @@ class PropertyRepository:
         snapshot = result.model_dump()
         analysis_type_normalized = analysis_type.lower()
 
-        with _connection() as conn:
+        with self._connection() as conn:
             record = self._get_record(conn, normalized)
             provenance_meta = (
                 {"provenance": [item.model_dump(mode="json") for item in property_data.provenance]}
@@ -358,7 +330,7 @@ class PropertyRepository:
         analysis_type: Optional[str] = None,
     ) -> List[AnalysisSnapshot]:
         normalized = _normalize_address(address)
-        with _connection() as conn:
+        with self._connection() as conn:
             record = self._get_record(conn, normalized)
             if record is None:
                 return []
@@ -538,14 +510,22 @@ class PropertyRepository:
             )
 
 
+def create_repository(database_url: Optional[str] = None) -> PropertyRepository:
+    """Factory for repositories (used by dependency injection)."""
+
+    resolved_url = database_url or settings.DATABASE_URL
+    if not resolved_url:
+        raise ValueError("DATABASE_URL must be configured")
+    return PropertyRepository(resolved_url)
+
+
 def get_repository() -> PropertyRepository:
-    global _repository
-    if _repository is None:
-        _repository = PropertyRepository()
-    return _repository
+    """Backwards-compatible helper for modules that still request a repository."""
+
+    return create_repository(settings.DATABASE_URL)
 
 
-def configure(database_url: str) -> None:
-    global _repository
-    init_engine(database_url)
-    _repository = PropertyRepository()
+def configure(database_url: str) -> PropertyRepository:
+    """Legacy entry-point retained for compatibility with older call sites."""
+
+    return create_repository(database_url)
