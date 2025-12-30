@@ -9,8 +9,17 @@ The ingestion layer uses `BaseDataProvider` from `src/services/data_providers/ba
 Key concepts:
 
 - **`BaseDataProvider`** defines `fetch_for_property(address)` and an optional `fetch_for_area(area_identifier)` method.
-- **`ProviderResult`** encapsulates provider metadata, a `PropertyDataPatch`, optional area benchmarks, and raw payloads/errors.
+- **`ProviderMetadata`** includes `provider_name` (required string identifier), optional `provider_id`, `fetched_at` (timezone-aware), and optional `request_id`.
+- **`ProviderResult`** encapsulates provider metadata, a typed payload (`PropertyDataPatch` and/or `AreaRentBenchmark` list), optional raw payload, and errors.
 - **`PropertyDataPatch`** carries partial updates (beds, baths, rent estimates, etc.) plus metadata and provenance fields.
+
+Exact `ProviderResult` fields:
+
+- `metadata` (`ProviderMetadata`, required): contains `provider_name`, optional `provider_id`, `fetched_at`, and `request_id`.
+- `property_data` (`PropertyDataPatch | None`): typed patch for property fields and provider-specific metadata.
+- `area_rent_benchmarks` (`List[AreaRentBenchmark]`): optional area rent benchmarks.
+- `raw_payload` (`Any | None`): raw upstream payload (logged/stored as JSON).
+- `errors` (`List[str]`): any provider-level errors worth retaining.
 
 ## Minimal provider skeleton
 
@@ -41,7 +50,7 @@ class ExampleProvider(BaseDataProvider):
             meta={"example_note": "sample data"},
         )
         return ProviderResult(
-            metadata=ProviderMetadata(provider_name=self.name),
+            metadata=ProviderMetadata(provider_name=self.name, provider_id="example-v1"),
             property_data=patch,
             raw_payload={"sample": True},
         )

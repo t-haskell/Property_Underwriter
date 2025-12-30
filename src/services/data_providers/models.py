@@ -116,8 +116,17 @@ class PropertyDataPatch:
 @dataclass(slots=True)
 class ProviderMetadata:
     provider_name: str
+    provider_id: Optional[str] = None
     fetched_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     request_id: Optional[str] = None
+
+    def __post_init__(self) -> None:
+        if not self.provider_name or not self.provider_name.strip():
+            raise ValueError("provider_name cannot be blank")
+        if self.provider_id is not None and not self.provider_id.strip():
+            raise ValueError("provider_id cannot be blank")
+        if self.fetched_at.tzinfo is None or self.fetched_at.tzinfo.utcoffset(self.fetched_at) is None:
+            raise ValueError("fetched_at must be timezone-aware")
 
 
 @dataclass(slots=True)
@@ -144,6 +153,22 @@ class ProviderResult:
     @property
     def provider(self) -> str:
         return self.metadata.provider_name
+
+    @property
+    def provider_id(self) -> str:
+        return self.metadata.provider_id or self.metadata.provider_name
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.metadata, ProviderMetadata):
+            raise ValueError("metadata must be ProviderMetadata")
+        has_payload = bool(
+            self.property_data
+            or self.area_rent_benchmarks
+            or self.raw_payload is not None
+            or self.errors
+        )
+        if not has_payload:
+            raise ValueError("ProviderResult must include payload data or errors")
 
 
 class ProviderPriority:

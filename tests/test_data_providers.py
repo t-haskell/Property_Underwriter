@@ -1,9 +1,12 @@
 import json
 import time
+from datetime import datetime
+
+import pytest
 
 import httpx
 
-from src.core.models import Address, ApiSource
+from src.core.models import Address, ApiSource, PropertyData
 from src.services.data_providers import (
     DataAggregationService,
     HudFmrProvider,
@@ -14,6 +17,7 @@ from src.services.data_providers import (
 )
 from src.services.data_providers.base import BaseDataProvider
 from src.services.data_providers.models import AreaIdentifier, AreaRentBenchmark
+from src.services.providers.base import PropertyDataProvider
 
 
 class _DummyResponse:
@@ -34,6 +38,14 @@ class _StaticProvider(BaseDataProvider):
         self._result = result
 
     def fetch_for_property(self, address: Address):  # pragma: no cover - trivial
+        return self._result
+
+
+class _LegacyProvider(PropertyDataProvider):
+    def __init__(self, result: PropertyData | None):
+        self._result = result
+
+    def fetch(self, address: Address):  # pragma: no cover - trivial
         return self._result
 
 
@@ -98,6 +110,23 @@ def test_marketplace_comps_provider_handles_rate_limits(monkeypatch):
     assert json.loads(result.property_data.meta["marketplace_comps"])[0]["address"] == "123"
 
 
+def test_provider_metadata_validation_requires_name_and_timezone():
+    with pytest.raises(ValueError, match="provider_name cannot be blank"):
+        ProviderMetadata(provider_name=" ")
+
+    with pytest.raises(ValueError, match="fetched_at must be timezone-aware"):
+        ProviderMetadata(provider_name="example", fetched_at=datetime(2024, 1, 1))
+
+
+def test_provider_result_validation_requires_payload():
+    metadata = ProviderMetadata(provider_name="example")
+    with pytest.raises(ValueError, match="ProviderResult must include payload data or errors"):
+        ProviderResult(metadata=metadata)
+
+    valid = ProviderResult(metadata=metadata, raw_payload={"ok": True})
+    assert valid.raw_payload == {"ok": True}
+
+
 def test_data_aggregation_merges_sources_and_benchmarks():
     address = Address(line1="1 Main", city="Austin", state="TX", zip="78701")
 
@@ -141,3 +170,35 @@ def test_data_aggregation_merges_sources_and_benchmarks():
     assert any(src.provider == ApiSource.ZILLOW.value for src in aggregated.provenance)
     benchmarks = json.loads(aggregated.meta.get("rent_benchmarks", "[]"))
     assert benchmarks[0]["provider"] == ApiSource.HUD.value
+
+
+def test_data_aggregation_prefers_primary_over_open_data():
+    address = Address(line1="1 Main", city="Austin", state="TX", zip="78701")
+
+    primary_data = PropertyData(
+        address=address,
+        beds=2,
+        meta={},
+        sources=[],
+        provenance=[],
+    )
+    primary_provider = _LegacyProvider(primary_data)
+
+    open_data_result = ProviderResult(
+        metadata=ProviderMetadata(provider_name="open-data"),
+        property_data=PropertyDataPatch(
+            beds=4,
+            fields=["beds"],
+        ),
+    )
+    open_data_provider = _StaticProvider("open-data", open_data_result)
+
+    aggregator = DataAggregationService(
+        primary_providers=[primary_provider],
+        open_data_providers=[open_data_provider],
+        marketplace_provider=None,
+    )
+
+    aggregated = aggregator.aggregate(address)
+
+    assert aggregated.beds == 2
