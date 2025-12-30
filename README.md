@@ -30,6 +30,12 @@ Property_Underwriter/
 └─ requirements.txt           # Python dependencies
 ```
 
+## Project Docs
+
+- [Architecture](docs/ARCHITECTURE.md)
+- [Contributing](docs/CONTRIBUTING.md)
+- [Provider Guide](docs/PROVIDER_GUIDE.md)
+
 ### Backend (FastAPI)
 - Entry point: `src/api/main.py`
 - REST endpoints for health checks, address suggestions, property fetching, and rental/flip analyses.
