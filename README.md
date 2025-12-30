@@ -154,6 +154,11 @@ python -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 
+# Fast verification loop (pre/post refactor)
+pytest -q
+ruff check .
+mypy src tests
+
 # Linting
 ruff check .
 
@@ -185,4 +190,3 @@ npm run storybook  # (optional) Component previews
 
 ## Continuous Integration
 The GitHub Actions workflow (`.github/workflows/ci.yml`) validates every push with Ruff, MyPy, Pytest coverage, and uploads the coverage report. Extend the pipeline if you introduce additional checks (e.g., frontend linting or tests).
-
