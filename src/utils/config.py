@@ -90,6 +90,13 @@ class RedfinConfig:
     host: str
 
 
+@dataclass(slots=True)
+class ArcGisConfig:
+    base_url: str
+    layer_id: str
+    timeout: int
+
+
 class Settings(BaseSettings):
     OPENAI_API_KEY: str | None = None
     OPENAI_MODEL: str | None = "gpt-4o-mini"
@@ -122,6 +129,11 @@ class Settings(BaseSettings):
     HUD_FMR_API_KEY: str | None = None
     HUD_FMR_BASE_URL: str = "https://www.huduser.gov/hudapi/public/fmr"
     HUD_FMR_CACHE_TTL_MIN: int = 720
+
+    MD_IMAP_BASE_URL: str = ""
+    MD_IMAP_LAYER_ID: str = ""  # TODO: Populate with MD iMAP parcel layer ID
+    MASS_GIS_BASE_URL: str = ""
+    MASS_GIS_LAYER_ID: str = ""  # TODO: Populate with MassGIS parcel layer ID
 
     ENABLE_MARKETPLACE_SCRAPING: bool = False
     MARKETPLACE_SCRAPING_BASE_URL: str = ""
@@ -193,6 +205,22 @@ class Settings(BaseSettings):
         )
 
     @property
+    def md_imap(self) -> ArcGisConfig:
+        return ArcGisConfig(
+            base_url=self.MD_IMAP_BASE_URL,
+            layer_id=self.MD_IMAP_LAYER_ID,
+            timeout=self.PROVIDER_TIMEOUT_SEC,
+        )
+
+    @property
+    def mass_gis(self) -> ArcGisConfig:
+        return ArcGisConfig(
+            base_url=self.MASS_GIS_BASE_URL,
+            layer_id=self.MASS_GIS_LAYER_ID,
+            timeout=self.PROVIDER_TIMEOUT_SEC,
+        )
+
+    @property
     def hud(self) -> HudConfig:
         return HudConfig(
             api_key=self.HUD_FMR_API_KEY,
@@ -232,6 +260,8 @@ def _get_settings() -> Settings:
         "estated": bool(settings.ESTATED_API_KEY),
         "rentcast": bool(settings.RENTCAST_API_KEY),
         "redfin": bool(settings.REDFIN_API_KEY),
+        "md_imap": bool(settings.MD_IMAP_BASE_URL),
+        "mass_gis": bool(settings.MASS_GIS_BASE_URL),
     }
     logger.debug("Loaded settings (provider configured flags): %s", configured)
     return settings

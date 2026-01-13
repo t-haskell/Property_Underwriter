@@ -120,6 +120,8 @@ class ApiSource(str, Enum):
     ESTATED = "estated"
     RENTCAST = "rentcast"
     REDFIN = "redfin"
+    MD_IMAP = "md_imap"
+    MASS_GIS = "mass_gis"
     MOCK = "mock"
     HUD = "hud_fmr"
     MARKETPLACE = "marketplace_comps"
